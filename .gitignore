@@ -101,3 +101,4 @@ wd-v1-4-moat-tagger-v2.csv
 .venv/
 logs/
 *.log
+*.pth

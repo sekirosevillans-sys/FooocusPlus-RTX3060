@@ -1,0 +1,932 @@
+import json
+import platform
+import random
+import shutil
+import subprocess
+from pathlib import Path
+from enhanced.translator import interpret
+
+
+# default user_path
+# it is set to the actual path by
+# create_user_structure(config_user_dir)
+current_dir = Path.cwd().resolve()
+masters_dir = Path(current_dir / "masters").resolve()
+user_path = Path(current_dir.parent/'UserDir').resolve()
+
+# these are platform independent functions, for universal use:
+
+
+def copy_dirs(arg_source, arg_dest):
+    # dirs including files & empty dirs
+    source_path = Path(arg_source)
+    dest_path = Path(arg_dest)
+
+    if not source_path.is_dir():
+        return
+
+    # Recursively scan the source directory
+    for path in source_path.rglob('*'):
+        # Calculate the relative path from the source
+        rel_path = path.relative_to(source_path)
+        target_path = dest_path / rel_path
+
+        # 1. If it is a directory, recreate the
+        # folder structure, including empty folders
+        if path.is_dir():
+            target_path.mkdir(parents=True, exist_ok=True)
+
+        # 2. If it is a file, only copy it
+        # if it is missing
+        elif path.is_file():
+            if not target_path.exists():
+                # Ensure parent directories exists
+                target_path.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(path, target_path)
+    return
+
+
+def copy_dir_structure(arg_source, arg_dest): # dirs without files
+    source_path = Path(arg_source)
+    dest_path = Path(arg_dest)
+    for item in source_path.glob("**/*"):
+        if item.is_dir():
+            new_dir = dest_path / item.relative_to(source_path)
+            new_dir.mkdir(parents = True, exist_ok = True)
+
+def copy_file(arg_source, arg_dest, overwrite = False):
+    # preserves metadata
+    # copy one file
+    # assumes the destination directory already exists
+    # will not overwrite an existing file
+    # otherwise use mkdir_copy_file()
+    # returns booleans not file path
+    file_copy = False
+    file_exists = False
+    source_path = Path(arg_source)
+    dest_path = Path(arg_dest)
+    if dest_path.is_file() and not overwrite:
+        file_exists = True # file already exists
+    else:
+        try:
+            shutil.copy2(source_path, dest_path)
+            file_copy = True # file copy successful
+        except:
+            interpret('Could not copy', arg_source)
+    return file_copy, file_exists
+
+def copy_files(file_list, arg_dest): # preserves metadata
+    # copy a list of files
+    copy_count = 0
+    exists_count = 0
+    make_dir(arg_dest)
+    for file_path in file_list:
+        source_path = Path(file_path)
+        dest_path = Path(arg_dest/source_path.name)
+        file_copy, file_exists = copy_file(source_path, dest_path)
+        if file_copy:
+            copy_count += 1
+        if file_exists:
+            exists_count += 1
+    return copy_count, exists_count
+
+def count_files(arg_dir):
+    # count files in a directory
+    # ignores sub-directories
+    path_dir = Path(arg_dir)
+    # each time a file is found the integer 1 is produced
+    # the sum functions adds all of the 1's together
+    count = sum(1 for entry in path_dir.iterdir() if entry.is_file())
+    return count
+
+def delete_file(arg_file):
+    remove_file_path = Path(arg_file)
+    remove_file_path.unlink(missing_ok=True)
+    success = not remove_file_path.is_file()
+    return success
+
+def empty_dir(arg_dir):
+    # remove the directory contents
+    # but not the directory itself
+    result = True
+    empty_path = Path(arg_dir)
+    try:
+        for item in empty_path.iterdir():
+            if item.is_file():
+                item.unlink(missing_ok=True)
+            elif item.is_dir():
+                shutil.rmtree(item, ignore_errors=True)
+    except Exception as error:
+        interpret('Could not delete', empty_path)
+        interpret('Reason:', error)
+        result = False
+    return result
+
+def exists_file(arg_file):
+    return Path(arg_file).is_file()
+
+def find_dir_path(search_dir, find_dir):
+    search_path = Path(search_dir)
+    str_find_dir = str(find_dir)
+    for dir_path in search_path.rglob(str_find_dir):
+        return Path(dir_path).resolve()
+    return '' # empty string for search fail
+
+def find_file_path(search_dir, filename, excluding_dir = ''):
+    search_path = Path(search_dir)
+    str_filename = str(filename)
+    for file_path in search_path.rglob(str_filename):
+        if excluding_dir in file_path.parts:
+            continue
+        return Path(file_path).resolve()
+    return '' # empty string for search fail
+
+def list_files_by_patterns(search_dir,
+    patterns=None, names_only=False,
+    with_extension=False):
+    # looks in search_dir and its subdirectories
+    # returns a list of complete pathlib objects
+    # corresponding to the patterns
+    # or if names_only, just the filenames & extensions
+    # a pattern could be a file extension such as ["*.jpg"]
+    file_list = []
+    if isinstance(patterns, str):
+        patterns = [patterns]
+    search_path = Path(search_dir)
+    if search_path.exists() and patterns:
+        for p in patterns:
+            file_list.extend([f for f in search_path.rglob(p) if f.is_file()])
+        if names_only:
+            # return filenames without extensions as strings:
+            return sorted(list(set([f.stem for f in file_list])))
+        elif with_extension:
+            # return filenames with extensions as strings:
+            return [f.name for f in file_list]
+    # or return list of pathlib objects with full paths
+    # empty list if no qualifying files found
+    return file_list
+
+def list_files_excluding(file_list, excluding_list):
+    # file_list must be a list of pathlib objects
+    # filters the file_list to omit files from the excluding_list
+    # returns a file list without the exclusions
+    filtered_list = []
+    filtered_list = [f for f in file_list if f.name not in excluding_list]
+    return filtered_list # empty list if no qualifying files found
+
+def load_json(arg_json):  # the file is automatically closed
+    load_path = Path(arg_json)
+    if load_path.is_file():
+        try:
+            json_string = load_path.read_text(encoding="utf-8")
+            json.contents = json.loads(json_string)
+        except Exception as error:
+            interpret('Could not load', arg_json)
+            interpret('because:', error)
+            json_contents = False
+    else:
+        json_contents = False
+    return json_contents
+
+def load_textfile(arg_textfile):  # the file is automatically closed
+    # the results are returned as a list of text lines
+    load_path = Path(arg_textfile)
+    if load_path.is_file():
+        try:
+            text_contents = load_path.read_text(encoding="utf-8")
+            text_list = text_contents.splitlines()
+        except Exception as error:
+            interpret('Could not load', arg_textfile)
+            interpret('because:', error)
+            text_list = False
+    else:
+        text_list = False
+    return text_list
+
+def locate_value(arg_list, parameter, terminator = ''):
+    # find a parameter and value in a list
+    # the optional terminator will truncate the value string
+    # if used, the terminator is typically a space or a colon
+    value = ''
+    trans_table = str.maketrans('','','"')
+    for line in arg_list:
+        if line.startswith(parameter):
+            # remove the parameter and ending space:
+            value_quote = line.strip(parameter).strip()
+            # remove quotation marks, if any:
+            value = value_quote.translate(trans_table)
+            if terminator != '':
+                value_list = value.split(terminator,1)
+                value = value_list[0]
+            break
+    return value
+
+def make_dir(arg_dir):
+    make_path = Path(arg_dir)
+    if not make_path.is_dir():
+        try:
+            make_path.mkdir(parents = True, exist_ok = True)
+        except Exception as error:
+            interpret('Could not create the directory', make_path)
+            interpret('because', error)
+            make_path = ''
+    return make_path
+
+def mkdir_copy_file(arg_source_file, arg_dest_dir):
+    # copy a file to a directory
+    # ensures destination directory exists before copy
+    # makes the directory if does not exist
+    # returns the newly created file path if successful
+    source_file_path = Path(arg_source_file)
+    dest_directory_path = Path(arg_dest_dir)
+    dest_file_path = dest_directory_path / source_file_path.name
+    make_path = make_dir(dest_directory_path)
+    if make_path:
+        try:
+            dest_path = shutil.copy2(source_file_path, dest_file_path)
+        except:
+            interpret('Could not copy the file:', arg_source_file)
+            dest_path = ''
+    else:
+        interpret('Could not create the directory:', dest_directory_path)
+        dest_path = ''
+    return dest_path
+
+def move_file(arg_source_file, arg_dest_dir):
+    # makes arg_dest_dir if necessary
+    # then copy file to it and delete the original
+    success = mkdir_copy_file(arg_source_file, arg_dest_dir)
+    if success:
+        success = delete_file(arg_source_file)
+    else:
+        success = ''
+    return success
+
+def move_files_excluding(arg_source_dir, arg_dest_dir,
+        excluding_list):
+    # moves files to a new directory,
+    # deleting the originals
+    # ignoring files in excluding_list
+    # if arg_source_dir does not exist, exits quietly
+    # if arg_dest_dir does not exist it is created
+    source_directory_path = Path(arg_source_dir)
+    if not source_directory_path.is_dir():
+        return 0
+    destination_directory_path = Path(arg_dest_dir)
+    all_files = [f for f in source_directory_path.iterdir() if f.is_file()]
+    files_to_move = list_files_excluding(all_files, excluding_list)
+    moved_count = 0
+    for source_file_path in files_to_move:
+        success = move_file(source_file_path, destination_directory_path)
+        if success:
+            moved_count += 1
+        else:
+            interpret('Did not move', source_file_path.name)
+    interpret(f'Moved {moved_count} files out of {len(all_files)}')
+    return moved_count
+
+def random_file_copy(from_dir, to_dir, as_file):
+    file_list = list_files_by_patterns(from_dir, ["*.mp3"])
+    if len(file_list) >0:
+        random_index = random.randint(0, (len(file_list)-1))
+        random_path = Path(file_list[random_index])
+        dest_file = Path(to_dir/as_file)
+        copy_file(random_path, dest_file, True)
+        random_name = random_path.stem
+    else:
+        random_name = ''
+    return random_name
+
+def rename_path_name(arg_full_path, path_name):
+    # renames only the filename within the full path
+    # the path_name argument is equivalent to path.name
+    # meaning that it is filename with extension
+    full_path = Path(arg_full_path)
+    parent_path = full_path.parent
+    new_path = Path(parent_path/new_name)
+    full_path.rename(new_path)
+    return new_path
+
+def remove_dirs(arg_dir):
+    # remove the directory, including all its contents
+    remove_path = Path(arg_dir)
+    if remove_path.is_dir():
+        shutil.rmtree(remove_path, ignore_errors=True)
+    return
+
+def remove_subdirs(arg_dir):
+    # delete all subdirectories within arg_dir
+    # but leavee any files in arg_dir untouched
+    base_path = Path(arg_dir)
+    if base_path.is_dir():
+        for item in base_path.iterdir():
+            if item.is_dir():
+                shutil.rmtree(item, ignore_errors=True)
+    return
+
+def remove_empty_dir(arg_dir):
+    # remove directory only if it is empty
+    remove_empty_path = Path(arg_dir)
+    success = True
+    if remove_empty_path.is_dir() and not any(remove_empty_path.iterdir()):
+        remove_empty_path.rmdir()
+    else:
+        success = False
+    return success
+
+def replace_dir(arg_old_dir, arg_new_dir):
+    old_dir = Path(arg_old_dir)
+    new_dir = Path(arg_new_dir)
+    success = True
+    if old_dir.is_dir():
+        try:
+            remove_dirs(new_dir)
+            old_dir.replace(new_dir)
+        except:
+            success = False
+    return success
+
+def save_json(arg_data, arg_json):
+    # the file is automatically closed
+    save_path = Path(arg_json)
+    try:
+        with save_path.open("w", encoding="utf-8") as json_file:
+            json.dump(arg_data, json_file, indent=4, ensure_ascii=False)
+        success = True
+    except Exception as error:
+        interpret('Could not write to', arg_json)
+        interpret('because:', error)
+        success = False
+    return success
+
+def save_textfile(arg_data, arg_textfile):
+    # the file is automatically closed
+    save_path = Path(arg_textfile)
+    try:
+        save_path.write_text(arg_data, encoding="utf-8")
+        success = True
+    except Exception as error:
+        interpret('Could not write to', arg_textfile)
+        interpret('because:', error)
+        success = False
+    return success
+
+def verify_dictionary(arg_source):
+    # if it's not a dictionary, make it one
+    if isinstance(arg_source, dict):
+        verified_dictionary = arg_source
+    elif isinstance(arg_source, str):
+        try:
+            verified_dictionary = json.loads(arg_source)
+        except json.JSONDecodeError:
+            # if the string is not a valid JSON:
+            verified_dictionary = 'Invalid JSON format'
+    else:
+        verified_dictionary = 'Unsupported input type'
+    return verified_dictionary
+
+
+
+# file structure section
+def init_batch_structure(user_dir):
+    # Ensure that all reference batch files
+    # are current and correctly named.
+    # Copy the contents of
+    # masters/master_batch_startups
+    # to user_dir/batch_startups.
+    # The user must copy the batch file they
+    # want from "FooocusPlus\UserDir\batch_startups"
+    # to the parent directory, "FooocusPlus" to use it
+    global masters_dir
+    try:
+        master_batch_path = Path(masters_dir/'master_batch_startups')
+        ref_batch_path = Path(user_dir/'batch_startups')
+        remove_dirs(ref_batch_path)
+        copy_dirs(master_batch_path, ref_batch_path)
+    except:
+        ref_batch_path = ''
+    return ref_batch_path
+
+
+def create_directory_link(link_path: Path, target_path: Path) -> None:
+    """
+    Creates a cross-platform directory redirection link.
+    - Windows: Creates a Directory Junction (mklink /J) - no admin required.
+    - Linux/macOS: Creates a standard symbolic link (symlink) - no admin required.
+    """
+    if not link_path.exists():
+        link_path.parent.mkdir(parents=True, exist_ok=True)
+        target_path.mkdir(parents=True, exist_ok=True)
+
+        system_os = platform.system()
+        if system_os == 'Windows':
+            # Windows Directory Junction (does not require admin rights)
+            subprocess.run(
+                f'mklink /J "{link_path}" "{target_path}"',
+                shell=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
+        elif system_os in ['Linux', 'Darwin']:
+            # Linux/macOS native symlink (does not require admin rights)
+            try:
+                link_path.symlink_to(target_path, target_is_directory=True)
+            except Exception:
+                subprocess.run(
+                    f'ln -s "{target_path}" "{link_path}"',
+                    shell=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL
+                )
+    return
+
+
+def cleanup_structure(directml=False, arg_user_dir = '',
+    python_embedded_path='', win32_root=''):
+    # cleanup an error condition from version 1.0.0
+    remove_dirs('python_embedded')
+
+    # if python_embedded, remove directml if not required, 1.0.3
+    if python_embedded_path.is_dir() and not directml:
+        site_packages = Path(python_embedded_path/'Lib/site-packages')
+        remove_path = find_dir_path(site_packages, 'torch_directml-0.2.5.dev240914.dist-info')
+        if remove_path:
+            interpret('Removing obsolete torch_directml files')
+            remove_dirs(remove_path)
+            remove_dirs(Path(site_packages/'torch_directml'))
+            delete_file(Path(site_packages/'torch_directml_native.cp310-win_amd64.pyd'))
+
+    # remove UserDir from repo, an error from 1.0.3
+    remove_dirs('UserDir')
+    # remove a phantom FooocusPlus from repo, and error from 1.0.5
+    remove_dirs('FooocusPlus')
+
+    # cleanup batch file clutter, effective 1.0.6
+    delete_file(Path(win32_root/'run_FooocusPlus_commit.bat'))
+    delete_file(Path(win32_root/'run_FooocusPlus_dev.bat'))
+
+    # remove unused translator dir, from 1.0.7
+    user_dir = Path(arg_user_dir).resolve()
+    remove_dirs(Path(user_dir/'translator_packs'))
+
+    # Erase Comfy comfy/models subdirectories,
+    # and establish rembg redirection.
+    repo_root = Path.cwd()
+    comfy_models_dir = repo_root / 'comfy' / 'models'
+
+    # Wipe the entire contents of comfy/models
+    # if it exists on disk, from 1.1.3
+    if comfy_models_dir.exists() and comfy_models_dir.is_dir():
+        for item in comfy_models_dir.iterdir():
+            try:
+                # Windows Safety Gate: Avoid running shutil.rmtree on a directory junction,
+                # as Python will follow the junction and delete your files inside UserDir.
+                if platform.system() == 'Windows':
+                    try:
+                        # .rmdir() on a junction safely unlinks it without touching target files.
+                        # It will fail with OSError if 'item' is a real, non-empty directory.
+                        item.rmdir()
+                        continue
+                    except OSError:
+                        pass
+
+                if item.is_symlink():
+                    item.unlink()
+                elif item.is_dir():
+                    shutil.rmtree(item)
+                else:
+                    item.unlink()
+            except Exception as e:
+                print(f'[Structure] Warning: Failed to remove {item}: {e}')
+
+    # Re-create the comfy/models directory itself
+    # (now completely empty)
+    comfy_models_dir.mkdir(parents=True, exist_ok=True)
+
+    # Create the rembg link
+    user_rembg_target = user_dir / 'models' / 'rembg'
+    comfy_rembg_link = comfy_models_dir / 'rembg'
+    create_directory_link(comfy_rembg_link, user_rembg_target)
+
+    # removed obsolete logo & default image from welcome_images, 1.08
+    delete_file(Path(user_dir/'welcome_images/FooocusPlusLogo.png'))
+
+    # initialize the batch file startup directory, 1.0.9
+    # this is of great assistance for initial installations
+    ref_batch_path = init_batch_structure(user_dir)
+    if ref_batch_path == '':
+        print()
+        print('Could not install the batch startup files to the user directory')
+    return
+
+
+def remove_obsolete_flux_folder(arg_parent_str):
+    # remove obsolete Flux folder if empty, from 1.0.1
+    checkpoint_path = Path(arg_parent_str)
+    old_flux_path = Path(checkpoint_path/'Flux')
+    old_flux_file = Path(old_flux_path/'put_flux_base_models_here')
+    delete_file(old_flux_file)
+    remove_empty_dir(old_flux_path)
+    return
+
+
+def create_model_structure(paths_checkpoints, paths_loras):
+    # Define standard subfolder schemas
+    checkpoint_subdirs = [
+        'Alternative',
+        'FluxDev',
+        'FluxKrea',
+        'FluxSchnell',
+        'LowVRAM',
+        'Pony',
+        'SD1.5',
+        'SD3x',
+        'Z-Image'
+    ]
+
+    for path_str in paths_checkpoints[:2]:
+        ckpt_root = Path(path_str)
+
+        # Remove obsolete Flux folders if empty,
+        # effective 1.0.1
+        remove_obsolete_flux_folder(str(ckpt_root))
+
+        # Z-Image Turbo model from 'Alternative'
+        # to 'Z-Image', effective 1.1.3
+        z_image_filename = 'z-image-turbo-fp8-e4m3fn.safetensors'
+        source_file = ckpt_root / 'Alternative' / z_image_filename
+        dest_dir = ckpt_root / 'Z-Image'
+
+        if source_file.exists():
+            interpret(f'[Structure] Moving', f'{z_image_filename} → {dest_dir}')
+            move_file(source_file, dest_dir)
+
+        # Verify standard model directories
+        for subdir in checkpoint_subdirs:
+            make_dir(ckpt_root / subdir)
+
+    lora_subdirs = [
+        'Alternative',
+        'Flux',
+        'Pony',
+        'SD1.5',
+        'SD3x',
+        'Z-Image'
+    ]
+
+    # Verify standard LoRA directories
+    for path in paths_loras[:2]:
+        lora_root = Path(path)
+        for subdir in lora_subdirs:
+            make_dir(lora_root / subdir)
+
+    return
+
+
+def replace_obsolete_categories(user_presets_path):
+    # from 1.0.9
+    arg_old_dir = Path(user_presets_path/'Flux1D')
+    arg_new_dir = Path(user_presets_path/'Flux1Dev')
+    replace_dir(arg_old_dir, arg_new_dir)
+
+    arg_old_dir = Path(user_presets_path/'Flux1S')
+    arg_new_dir = Path(user_presets_path/'Flux1Schnell')
+    replace_dir(arg_old_dir, arg_new_dir)
+
+    arg_old_dir = Path(user_presets_path/'HyperFlux')
+    arg_new_dir = Path(user_presets_path/'HyperFlux1D')
+    replace_dir(arg_old_dir, arg_new_dir)
+
+    # from 1.1.3
+    arg_old_dir = Path(user_presets_path/'Z-Image')
+    arg_new_dir = Path(user_presets_path/'Z-Image Turbo')
+    move_files_excluding(arg_old_dir, arg_new_dir, '')
+    remove_empty_dir(arg_old_dir)
+
+    return
+
+
+def get_active_favorite_category(comfy_active: bool = True, is_low_vram: bool = False) -> str:
+    """
+    Resolves the active Favorite folder name based on the 2x2 matrix:
+    - Low VRAM + Comfy Active   -> 'LowVRAM_Favorite'
+    - Low VRAM + Comfy Inactive -> 'SDXL_LowVRAM_Favorite'
+    - Normal   + Comfy Active   -> 'Favorite'
+    - Normal   + Comfy Inactive -> 'SDXL_Favorite'
+    """
+    if is_low_vram:
+        return 'LowVRAM_Favorite' if comfy_active else 'SDXL_LowVRAM_Favorite'
+    else:
+        return 'Favorite' if comfy_active else 'SDXL_Favorite'
+
+
+def init_starter_presets(
+        user_presets_path,
+        restore=False,
+        arg_comfy=True,
+        is_low_vram=False):
+
+    # The universal master-to-user folder pairings
+    pairs = [
+        (Path('masters/starter_presets'), Path(user_presets_path / 'Favorite')),
+        (Path('masters/sdxl_presets'), Path(user_presets_path / 'SDXL_Favorite')),
+        (Path('masters/lowVRAM_presets'), Path(user_presets_path / 'LowVRAM_Favorite')),
+        (Path('masters/sdxl_lowVRAM_presets'), Path(user_presets_path / 'SDXL_LowVRAM_Favorite'))
+    ]
+
+    if restore:
+        # User explicitly clicked 'Restore Favorites':
+        # Overwrite/refill ONLY the currently active favorite category
+        active_cat_name = get_active_favorite_category(arg_comfy, is_low_vram)
+        active_target = Path(user_presets_path / active_cat_name)
+
+        for master_path, target_path in pairs:
+            if target_path == active_target:
+                copy_dirs(master_path, target_path)
+                break
+    else:
+        # Startup: Seed any folder that does not exist at all.
+        # If the directory already exists (even if empty),
+        # do NOT overwrite user choices!
+        for master_path, target_path in pairs:
+            if not target_path.is_dir():
+                print()
+                interpret('Initializing the', f'{target_path.name} directory with starter presets.')
+                copy_dirs(master_path, target_path)
+    return
+
+
+def update_favorite_presets(user_presets_path, comfy_active=True, is_low_vram=False):
+    """
+    Scans all 4 Favorite folders for standard presets.
+    If a preset with a matching filename is found in
+    masters/master_presets, it updates the user's favorite
+    copy with the master version to keep it current.
+    """
+    master_presets_dir = Path('masters/master_presets')
+    if not master_presets_dir.is_dir():
+        return
+
+    excluded_fav_folders = {'Favorite', 'SDXL_Favorite', 'LowVRAM_Favorite', 'SDXL_LowVRAM_Favorite'}
+    master_presets = {}
+    for file_path in master_presets_dir.rglob('*'):
+        if file_path.is_file():
+            if any(folder in file_path.parts for folder in excluded_fav_folders):
+                continue
+            master_presets[file_path.name] = file_path
+
+    updated_count = 0
+    # Scan and synchronize all 4 Favorite folders
+    # in user_presets
+    for fav_cat in excluded_fav_folders:
+        fav_dir = Path(user_presets_path / fav_cat)
+        if not fav_dir.is_dir():
+            continue
+
+        for user_fav_file in fav_dir.iterdir():
+            if user_fav_file.is_file():
+                filename = user_fav_file.name
+                if filename in master_presets:
+                    master_file = master_presets[filename]
+                    success, existed = copy_file(master_file, user_fav_file, overwrite=True)
+                    if success:
+                        updated_count += 1
+
+    if updated_count > 0:
+        interpret('Synchronized the favorite presets with the masters')
+    return
+
+
+def clear_user_favorites(
+        user_presets_path,
+        comfy_active=True,
+        is_low_vram=False):
+    active_fav_cat = get_active_favorite_category(comfy_active, is_low_vram)
+    source_dir = Path(user_path / f'user_presets/{active_fav_cat}/')
+    dest_dir = Path(user_path / 'user_presets/Old Favorites')
+    success = move_files_excluding(source_dir, dest_dir, '')
+    return success
+
+
+def init_preset_structure(
+        init=False,
+        restore_favorites=False,
+        clear_favorites=False,
+        comfy_active=True,
+        is_low_vram=False):
+    master_presets_path = Path('masters/master_presets')
+    old_presets_path = Path(user_path / 'master_presets')
+    remove_dirs(old_presets_path)
+    ref_presets_path = Path(user_path / 'reference_presets')
+    remove_dirs(ref_presets_path)
+    copy_dirs(master_presets_path, ref_presets_path)
+
+    working_presets_path = Path('presets').resolve()
+    remove_dirs(working_presets_path)
+    copy_dirs(master_presets_path, working_presets_path)
+
+    user_presets_path = Path(user_path / 'user_presets')
+    make_dir(user_presets_path)
+    if init:
+        replace_obsolete_categories(user_presets_path)
+        init_starter_presets(
+            user_presets_path,
+            restore=restore_favorites,
+            arg_comfy=comfy_active,
+            is_low_vram=is_low_vram)
+        update_favorite_presets(
+            user_presets_path,
+            comfy_active=comfy_active,
+            is_low_vram=is_low_vram)
+    elif clear_favorites:
+        clear_user_favorites(
+            user_presets_path,
+            comfy_active=comfy_active,
+            is_low_vram=is_low_vram)
+
+    # File count of the currently active favorite
+    # category determines button interactivity
+    active_fav_cat = get_active_favorite_category(comfy_active, is_low_vram)
+    count = count_files(Path(user_path / f'user_presets/{active_fav_cat}/'))
+
+    copy_dir_structure(master_presets_path, user_presets_path)
+    copy_dirs(user_presets_path, working_presets_path)
+    old_favourites_path = Path(working_presets_path / 'Old Favorites')
+    remove_dirs(old_favourites_path)
+
+    if any([init, restore_favorites, clear_favorites]):
+        interpret('Verified the working preset directory:', working_presets_path)
+    return count
+
+
+def create_user_structure(
+    config_user_dir,
+    arg_comfy_active,
+    arg_low_vram=False):
+    global masters_dir, user_path
+    # initialize the user directory, user_path
+    interpret('[Structure] Verifying the file structure...')
+    user_path = Path(config_user_dir).resolve()
+    interpret('Initialized the user directory at:', user_path)
+
+    # initialize the user mp3 audio directory
+    # which hold notification audio file options
+    master_audio_path = Path(masters_dir/'master_audio')
+    old_audio_path = Path(user_path/'master_audio')
+    remove_dirs(old_audio_path)
+    ref_audio_path = Path(user_path/'reference_audio')
+    remove_dirs(ref_audio_path)
+    copy_dirs(master_audio_path, ref_audio_path)
+    user_audio_path = Path(user_path/'user_audio')
+    make_dir(user_audio_path)
+    interpret('Verified the working notification audio directory:', user_audio_path)
+
+
+    # initialize the batch file startup directory
+    ref_batch_path = init_batch_structure(user_path)
+    if ref_batch_path:
+        interpret('Verified the batch file startup directory:', ref_batch_path)
+    else:
+        interpret('Could not verify the batch file startup directory')
+
+
+    # initialize the Language structure delete
+    # the contents of user_path/master_language
+    # to get a clean start copy the contents of
+    # '.masters/master_language' to UserDir
+    # for the user's reference only
+    master_language_path = Path('masters/master_language')
+    old_language_path = Path(user_path/'master_language')
+    remove_dirs(old_language_path)
+    ref_language_path = Path(user_path/'reference_language')
+    remove_dirs(ref_language_path)
+    copy_dirs(master_language_path, ref_language_path)
+
+    # delete '.language', i.e. FooocusPlusAI/language'
+    # which is used as a temporary working folder
+    # initialize '.language' with the contents
+    # of '.masters/master_language'
+    working_language_path = Path('language').resolve()
+    remove_dirs(working_language_path)
+    copy_dirs(master_language_path, working_language_path)
+
+    # overwrite '.language' with the contents
+    # of user_path './user_language'.
+    # This allows a user to completely customize
+    # the available languages, if desired
+    user_language_path = Path(user_path/'user_language')
+    make_dir(user_language_path)
+    copy_dirs(user_language_path, working_language_path)
+    interpret('Verified the working language directory:', working_language_path)
+
+
+    # initialize the UserDir/models structure
+    # includes files that are not downloaded
+    master_models_path = Path('masters/models')
+    user_models_path = Path(user_path/'models')
+    copy_dirs(master_models_path, user_models_path)
+    interpret('Verified the models directory:', user_models_path)
+
+
+    # also initialize the Presets structure
+    init_preset_structure(init=True, comfy_active=arg_comfy_active, is_low_vram=arg_low_vram)
+
+
+    # initialize the Styles structure
+    master_styles_path = Path('masters/master_styles')
+    old_styles_path = Path(user_path/'master_styles')
+    remove_dirs(old_styles_path)
+    ref_styles_path = Path(user_path/'reference_styles')
+    remove_dirs(ref_styles_path)
+    copy_dirs(master_styles_path, ref_styles_path)
+
+    working_styles_path = Path('sdxl_styles').resolve()
+    remove_dirs(working_styles_path)
+    copy_dirs(master_styles_path, working_styles_path)
+
+    user_styles_path = Path(user_path/'user_styles')
+    make_dir(user_styles_path)
+    samples_path = Path(user_styles_path/'samples')
+    make_dir(samples_path)
+    copy_dirs(user_styles_path, working_styles_path)
+    interpret('Verified the working styles directory:', working_styles_path)
+
+
+    # initialize the Substyles structure
+    master_substyles_path = Path('masters/master_fooocus_v2')
+    ref_substyles_path = Path(user_path/'reference_substyles')
+    remove_dirs(ref_substyles_path)
+    copy_dirs(master_substyles_path, ref_substyles_path)
+
+    working_substyles_path = Path('substyles').resolve()
+    remove_dirs(working_substyles_path)
+    copy_dirs(master_substyles_path, working_substyles_path)
+
+    user_substyles_path = Path(user_path/'user_substyles')
+    make_dir(user_substyles_path)
+    copy_dirs(user_substyles_path, working_substyles_path)
+    interpret('Verified the working substyles directory:', working_substyles_path)
+
+
+    # delete the contents of user_path/master_topics to get a clean start
+    # copy the contents of '.masters/master_topics' to user_path
+    # for the user's reference only
+    master_topics_path = Path('masters/master_topics')
+    old_topics_path = Path(user_path/'master_topics')
+    remove_dirs(old_topics_path)
+    ref_topics_path = Path(user_path/'reference_topics')
+    remove_dirs(ref_topics_path)
+    copy_dirs(master_topics_path, ref_topics_path)
+
+    # delete './custom/OneButtonPrompt/random_prompt/userfiles'
+    # which is used as a temporary working folder
+    # initialize 'userfiles' with the contents of '.masters/master_topics'
+    working_topics_path = Path('custom/OneButtonPrompt/random_prompt/userfiles')
+    remove_dirs(working_topics_path)
+    copy_dirs(master_topics_path, working_topics_path)
+
+    # overwrite 'userfiles' with the contents
+    # of user_path './user_topics'
+    # this allows a user to completely customize
+    # the available topics, if desired
+    user_topics_path = Path(user_path/'user_topics')
+    make_dir(user_topics_path)
+    copy_dirs(user_topics_path, working_topics_path)
+    interpret('Verfied the working Random Prompt (OneButtonPrompt) topics directory:')
+    print(f' {working_topics_path.resolve()}')
+
+
+    # initialize the welcome images
+    working_welcome_path = Path(user_path/'welcome_images')
+    remove_dirs(Path(user_path/'control_images'))
+    copy_dirs(Path(masters_dir/'master_control_images'), Path(user_path/'control_images'))
+    copy_dirs(Path(masters_dir/'master_welcome_images'), working_welcome_path)
+    interpret('Verified the working welcome directory:', working_welcome_path)
+
+
+    # initialize the Wildcards structure
+    # we do not need to delete UserDir/master_wildcards
+    # because it never existed
+    master_wildcards_path = Path(masters_dir/'master_wildcards')
+    ref_wildcards_path = Path(user_path/'reference_wildcards')
+    remove_dirs(ref_wildcards_path)
+    copy_dirs(master_wildcards_path, ref_wildcards_path)
+
+    working_wildcards_path = Path('wildcards').resolve()
+    remove_dirs(working_wildcards_path)
+    copy_dirs(master_wildcards_path, working_wildcards_path)
+    user_wildcards_path = Path(user_path/'user_wildcards')
+    make_dir(user_wildcards_path)
+
+    # upgrade from the old wildcard structure to the new
+    # preserving any custom wildcards from old_user_wildcards_path
+    old_user_wildcards_path = Path(user_path/'wildcards')
+    excluding_list = list_files_by_patterns(master_wildcards_path,
+        patterns=["*.txt"], with_extension=True)
+    move_files_excluding(old_user_wildcards_path, user_wildcards_path, excluding_list)
+    remove_dirs(old_user_wildcards_path)
+
+    copy_dirs(user_wildcards_path, working_wildcards_path)
+    interpret('Verified the working wildcards directory:', working_wildcards_path)
+
+    return

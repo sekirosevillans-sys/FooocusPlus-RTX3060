@@ -1,0 +1,943 @@
+/* based on https://github.com/AUTOMATIC1111/stable-diffusion-webui/blob/v1.6.0/style.css */
+
+
+/* Toolbox Styles */
+.toolbox {
+    height: auto;
+    position: absolute;
+    top: 210px;
+    left: 86%;
+    width: 120px !important;
+    z-index: 20;
+    text-align: center;
+}
+.infobox {
+    height: auto;
+    position: absolute;
+    top: -16rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 28rem !important;
+    z-index: 20;
+    text-align: left;
+    opacity: 0.85;
+    border-radius: 8px;
+    padding: 6px;
+    line-height: 120%;
+    border: groove;
+    color: var(--neutral-800);
+}
+.infobox_mobi {
+    height: auto;
+    position: absolute;
+    top: -16rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 22rem !important;
+    z-index: 20;
+    text-align: left;
+    opacity: 0.85;
+    border-radius: 8px;
+    padding: 6px;
+    line-height: 120%;
+    border: groove;
+}
+.toolbox_note {
+    height: auto;
+    position: absolute;
+    top: 160px;
+    left: 50%;
+    min-width: 75px !important;
+    width: 340px !important;
+    transform: translateX(-50%);
+    text-align: left;
+    opacity: 1;
+    border-radius: 8px;
+    padding: 0px;
+    border: groove;
+    z-index: 21;
+}
+.toolbox_note_button {
+    border-radius: 10px !important;
+    width: 50% !important;
+}
+.identity_note {
+    height: auto;
+    position: absolute;
+    top: 160px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 400px !important;
+    z-index: 21;
+    text-align: left;
+    opacity: 1;
+    border-radius: 8px;
+    padding: 0px;
+    border: groove;
+}
+.note_info {
+    padding: 8px;
+}
+.note_text {
+    padding: 2px;
+    text-align: center;
+}
+.preset_input textarea {
+    width: 120px;
+}
+.tag_array {
+    height: auto;
+    position: absolute;
+    top: 180px;
+    left: 15%;
+    width: 580px !important;
+    z-index: 22;
+}
+.taglib_button {
+    height: 35px;
+    transform: translate(5%, 35%);
+}
+.min_pad0 {
+    padding: 0px !important;
+}
+.min_pad {
+    padding: 2px !important;
+}
+
+.perf_modal_box {
+    height: auto;
+    position: absolute;
+    top: 80px;
+    left: 50%;
+    min-width: 400px !important;
+    width: 400px !important;
+    transform: translateX(-50%);
+    text-align: left;
+    opacity: 1;
+    border-radius: 8px;
+    /* Top, Right, Bottom, Left */
+    padding: 0px 20px 15px !important;
+    border: groove;
+    z-index: 22;
+}
+/* Forcibly prevent any row container inside the Performance Box from wrapping its buttons */
+.perf_modal_box .row,
+.perf_modal_box .form,
+.perf_modal_box > div {
+    flex-wrap: nowrap !important;
+}
+.remove_torch_box {
+    height: auto;
+    position: absolute;
+    top: 160px;
+    left: 50%;
+    min-width: 360px !important;
+    width: 360px !important;
+    transform: translateX(-50%);
+    text-align: left;
+    opacity: 1;
+    border-radius: 8px;
+    /* Top, Right, Bottom, Left */
+    padding: 0px 20px 15px !important;
+    border: groove;
+    z-index: 24;
+}
+/* 1. Forcibly prevent any row container inside this box from wrapping its buttons */
+.remove_torch_box .row,
+.remove_torch_box .form,
+.remove_torch_box > div {
+    flex-wrap: nowrap !important;
+}
+/* 2. Streamlined side-by-side button overrides */
+.torch_note_button {
+    border-radius: 10px !important;
+    width: 100% !important;  /* Let flexbox distribute the width equally */
+    min-width: 0 !important;  /* Overrides any Gradio minimum-width safety constraints */
+}
+
+/* Loader Styles */
+.loader-container {
+    display: flex; /* Use flex to align items horizontally */
+    align-items: center; /* Center items vertically within the container */
+    white-space: nowrap; /* Prevent line breaks within the container */
+    margin-right: 20px; /* this addition looks so much better at all browser widths */
+}
+.loader {
+    border: 8px solid #f3f3f3; /* Light grey */
+    border-top: 8px solid #3498db; /* Blue */
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    animation: spin 2s linear infinite;
+}
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+/* Main Canvas */
+.main_canvas {
+    min-height: 300px !important;
+}
+
+
+/* Progress Bar Styles */
+progress {
+    appearance: none; /* Remove default styling */
+    height: 20px; /* Set the height of the progress bar */
+    border-radius: 5px; /* Round the corners of the progress bar */
+    background-color: #f3f3f3; /* Light grey background */
+    width: 100%;
+    vertical-align: middle !important;
+}
+.progress-bar > .generating {
+    display: none !important;
+}
+.progress-bar{
+    height: 30px !important;
+}
+.progress-bar span {
+    text-align: right;
+    width: 215px;
+}
+
+/* Progress Bar Container Styles */
+.progress-container {
+    margin-left: 20px;
+    margin-right: 20px;
+    /* Allow the progress container to take up remaining space */
+    flex-grow: 1;
+}
+/* Set the color of the progress bar fill */
+progress::-webkit-progress-value {
+    background-color: #3498db; /* Blue color for the fill */
+}
+progress::-moz-progress-bar {
+    background-color: #3498db; /* Blue color for the fill in Firefox */
+}
+/* Style the text on the progress bar */
+progress::after {
+    content: attr(value '%'); /* Display the progress value followed by '%' */
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white; /* Set text color */
+    font-size: 14px; /* Set font size */
+}
+
+
+/* Style other texts */
+footer {
+    display: none !important;
+}
+
+.centre{
+    text-align: center;
+}
+.invisible{
+    display: none !important;
+}
+.text-arial label{
+    font-family: Arial !important;
+}
+
+.loader-container > span {
+    margin-left: 5px; /* Add spacing between the progress bar and the text */
+}
+
+div:has(> #positive_prompt) {
+    border: none;
+}
+#positive_prompt {
+    padding: 0px;
+    background: var(--background-fill-primary);
+}
+
+.type_row{
+    height: 102px !important;
+}
+.type_row_half{
+    height: 49% !important;
+    max-height: 51px !important;
+    font-size: 14px !important;
+    min-width: 75px !important;
+    overflow: hidden;
+}
+.type_row_third{
+    height: 49% !important;
+    max-height: 34px !important;
+    font-size: 14px !important;
+    min-width: 75px !important;
+    overflow: hidden;
+}
+
+/* Style Aspect Ratios */
+.aspect_info {
+    font-weight: bold !important;
+}
+.aspect_ratios {
+    margin-top: -10px !important;
+}
+.aspect_ratios label {
+    flex: calc(50% - 5px) !important;
+}
+.aspect_ratios label span {
+    white-space: nowrap !important;
+}
+.aspect_ratios label input {
+    margin-left: -5px !important;
+}
+.aspect_ratios_sd3 label {
+    width: 100px !important;
+}
+.aspect_ratios_sd3 label span {
+    white-space: nowrap !important;
+}
+.aspect_ratios_sd3 label input {
+    margin-left: -5px !important;
+}
+
+
+.preset_bar {
+    padding: 0px;
+    text-align: center;
+}
+#bar_title {
+    left: 5px;
+    top: 2px;
+    max-width: 75px !important;
+    overflow: hidden;
+    position: absolute;
+    white-space: nowrap;
+}
+.bar_button {
+    flex: 0 0 auto !important;
+    min-width: 25px !important;
+    overflow: hidden !important;
+    padding: 5px 8px !important;
+}
+
+.button_classic {
+    border-radius: 10px !important;
+    margin-bottom: 10px !important;
+    max-width: 90% !important;
+    width: 90% !important;
+}
+.button_classic2 {
+    border-radius: 10px !important;
+    margin: -15px 10px 0px !important;
+    max-width: 90% !important;
+    width: 90% !important;
+}
+.button_classic3 {
+    border-radius: 10px !important;
+    margin: 10px !important;
+    max-width: 80% !important;
+    width: 80% !important;
+}
+.button_classic4 {
+    align-self: center;
+    border-radius: 10px !important;
+    max-height: 80px !important;
+    max-height: 60px !important;
+    min-height: 60px !important;
+    max-width: 200px !important;
+    margin: -5px 25px -15px 0px !important;
+}
+.button_edit {
+    align-self: center;
+    border-radius: 10px !important;
+    max-height: 100px !important;
+    min-height: 100px !important;
+    max-width: 150px !important;
+}
+.button_info {
+    font-size: 12px !important;
+    font-weight: normal !important;
+    margin-top: 5px !important;
+    margin-bottom: -10px !important;
+}
+.button_info2 {
+    font-size: 12px !important;
+    font-weight: normal !important;
+    margin: 5px 5px 0px !important;
+}
+.column_chkbox {
+    max-width: 200px !important;
+    min-width: 200px !important;
+}
+.dropdown_info {
+    font-size: 12px !important;
+    font-weight: normal !important;
+    margin: 0px 0px -10px 5px !important;
+}
+.dropdown_50 {
+    max-width: 50% !important;
+    min-width: 50% !important;
+}
+
+#advanced_check_row {
+    align-items: center;
+    display: flex; !important;
+    flex-wrap: wrap !important;
+    justify-content: flex-end !important;
+    gap: 10px !important;
+}
+#advanced_check_row > .form,
+#advanced_check_row > .column,
+#advanced_check_row > div {
+    min-width: min-content !important;
+}
+#advanced_check_row > div:first-child {
+    margin-right: auto !important;
+}
+#advanced_check_row label span {
+    white-space: nowrap;
+    width: max-content !important;
+}
+#advanced_check_row .prose,
+#advanced_check_row label span {
+    white-space: nowrap !important;
+}
+#advanced_check_row > div {
+    min-width: unset !important;
+}
+#advanced_check {
+    padding-left: 5px;
+}
+#preset_inner_row {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 4px !important;
+    min-width: max-content !important; /* Prevents truncation */
+    padding-top: 10px;
+}
+#preset_inner_row .prose {
+    display: inline-block !important;
+    flex-shrink: 0 !important;
+    min-width: max-content !important;
+}
+#preset_label, #preset_info {
+    color: blue !important;
+    font-size: 1.05em !important;
+    font-weight: bold !important;
+    min-width: max-content !important;
+    white-space: nowrap !important;
+}
+#preset_label {
+    text-align: right !important;
+}
+#preset_info {
+    padding-right: 5px !important;
+    text-align: left !important;
+}
+
+.edit_check{
+    padding: 5px !important;
+}
+.edit_check_padded{
+    padding: 15px !important;
+}
+.edit_check_full{
+    align-self: center;
+    max-height: 100px !important;
+    min-height: 100px !important;
+    max-width: 190px !important;
+}
+
+.left_align_check {
+    flex: 0 1 auto !important;
+    width: fit-content !important;
+    min-width: 0 !important;
+}
+.left_align_check span{
+    font-size: 1.05em !important;
+    font-weight: bold !important;
+    white-space: nowrap !important;
+}
+.left_align_check input[type="checkbox"] {
+    margin-right: -3px;
+    /* simulate a thicker border */
+    outline: 1px solid #888 !important; /* Change #555 to your desired color */
+    outline-offset: -1px !important;
+}
+.link_trim{
+    max-width: 120px !important;
+}
+.min_check {
+    min-width: min(1px, 100%) !important;
+}
+
+.resizable_area {
+    resize: vertical;
+    overflow: auto !important;
+}
+
+.performance_selection label {
+    width: 140px !important;
+}
+
+
+@-moz-document url-prefix() {
+    .lora_weight input[type=number] {
+        width: 80px;
+  }
+}
+
+#context-menu{
+    z-index:9999;
+    position:absolute;
+    display:block;
+    padding:0px 0;
+    border:2px solid #a55000;
+    border-radius:8px;
+    box-shadow:1px 1px 2px #CE6400;
+    width: 200px;
+}
+
+.context-menu-items{
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.context-menu-items a{
+    display:block;
+    padding:5px;
+    cursor:pointer;
+}
+
+.context-menu-items a:hover{
+    background: #a55000;
+}
+
+.canvas-tooltip-info {
+    position: absolute;
+    top: 28px;
+    left: 2px;
+    cursor: help;
+    background-color: rgba(0, 0, 0, 0.3);
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    z-index: 100;
+}
+.canvas-tooltip-info::after {
+    content: '';
+    display: block;
+    width: 2px;
+    height: 7px;
+    background-color: white;
+    margin-top: 2px;
+}
+.canvas-tooltip-info::before {
+    content: '';
+    display: block;
+    width: 2px;
+    height: 2px;
+    background-color: white;
+}
+.canvas-tooltip-content {
+    display: none;
+    background-color: #f9f9f9;
+    color: #333;
+    border: 1px solid #ddd;
+    padding: 15px;
+    position: absolute;
+    top: 40px;
+    left: 10px;
+    width: 250px;
+    font-size: 12px;
+    opacity: 0;
+    border-radius: 8px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    z-index: 100;
+}
+.canvas-tooltip:hover .canvas-tooltip-content {
+    display: block;
+    animation: fadeIn 0.5s;
+    opacity: 1;
+}
+
+@keyframes fadeIn {
+    from {opacity: 0;}
+    to {opacity: 1;}
+}
+
+.styler {
+    overflow:inherit !important;
+}
+
+.gradio-container{
+    overflow: visible;
+}
+
+/* fullpage image viewer */
+
+#lightboxModal{
+    display: none;
+    position: fixed;
+    z-index: 1001;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(20, 20, 20, 0.95);
+    user-select: none;
+    -webkit-user-select: none;
+    flex-direction: column;
+}
+
+.modalControls {
+    display: flex;
+    position: absolute;
+    right: 0px;
+    left: 0px;
+    gap: 1em;
+    padding: 1em;
+    background-color:rgba(0,0,0,0);
+    z-index: 1;
+    transition: 0.2s ease background-color;
+}
+.modalControls:hover {
+    background-color:rgba(0,0,0,0.9);
+}
+.modalClose {
+    margin-left: auto;
+}
+.modalControls span{
+    color: white;
+    text-shadow: 0px 0px 0.25em black;
+    font-size: 35px;
+    font-weight: bold;
+    cursor: pointer;
+    width: 1em;
+}
+.modalControls span:hover, .modalControls span:focus{
+    color: #999;
+    text-decoration: none;
+}
+
+#lightboxModal > img {
+    display: block;
+    margin: auto;
+    width: auto;
+}
+#lightboxModal > img.modalImageFullscreen{
+    object-fit: contain;
+    height: 100%;
+    width: 100%;
+    min-height: 0;
+}
+
+.modalPrev,
+.modalNext {
+    cursor: pointer;
+    position: absolute;
+    top: 50%;
+    width: auto;
+    padding: 16px;
+    margin-top: -50px;
+    color: white;
+    font-weight: bold;
+    font-size: 20px;
+    transition: 0.6s ease;
+    border-radius: 0 3px 3px 0;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.modalNext {
+    right: 0;
+    border-radius: 3px 0 0 3px;
+}
+
+.modalPrev:hover,
+.modalNext:hover {
+    background-color: rgba(0, 0, 0, 0.8);
+}
+
+#imageARPreview {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    border: 2px solid red;
+    background: rgba(255, 0, 0, 0.3);
+    z-index: 900;
+    pointer-events: none;
+    display: none;
+}
+
+#style_search_bar {
+    margin-bottom: -5px !important;
+    min-width: 75% !important;
+}
+
+#stylePreviewOverlay {
+    opacity: 0;
+    pointer-events: none;
+    width: 128px;
+    height: 128px;
+    position: fixed;
+    top: 0px;
+    left: 0px;
+    border: solid 1px lightgrey;
+    transform: translate(-140px, 20px);
+    background-size: cover;
+    background-position: center;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 5px;
+    z-index: 100;
+    transition: transform 0.1s ease, opacity 0.3s ease;
+}
+
+#stylePreviewOverlay.lower-half {
+    transform: translate(-140px, -140px);
+}
+
+/* scrollable box for style selections */
+.contain .tabs {
+    height: 92%;
+}
+
+.contain .tabs .tabitem.style_selections_tab {
+    height: 100%;
+}
+.contain .tabs .tabitem.style_selections_tab > div:first-child {
+    height: 100%;
+}
+.contain .tabs .tabitem.style_selections_tab .style_selections {
+    min-height: 550px;
+    height: 100%;
+}
+
+.contain .tabs .tabitem.style_selections_tab .style_selections .wrap[data-testid="checkbox-group"] {
+    position: absolute;
+    overflow: auto;
+    padding-right: 2px;
+    height: 100%;
+    min-height: 550px;
+    scrollbar-width: thin;      /* Firefox */
+    -ms-overflow-style: none;   /* IE 和 Edge */
+}
+
+/* 针对Webkit内核浏览器（如Chrome、Safari） */
+#style_selections_tab::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+}
+
+.contain .tabs .tabitem.style_selections_tab .style_selections .wrap[data-testid="checkbox-group"] label {
+  /* max-width: calc(35% - 15px) !important; /* 添加此选项以启用3列布局 */
+    flex: calc(50% - 5px) !important;
+}
+.contain .tabs .tabitem.style_selections_tab .style_selections .wrap[data-testid="checkbox-group"] label span {
+    /* white-space:nowrap; */
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* styles preview tooltip */
+.preview-tooltip {
+    background-color: #fff8;
+    font-family: monospace;
+    text-align: center;
+    border-radius: 5px 5px 0px 0px;
+    display: none; /* remove this to enable tooltip in preview image */
+}
+
+#inpaint_canvas .canvas-tooltip-info {
+    top: 2px;
+}
+#inpaint_brush_color input[type=color]{
+    background: none;
+}
+
+#inpaint_brush_color input[type="color"] {
+    /* Increases the physical height of the color box */
+    height: 48px !important;
+    /* Forces the color box to span the full width of its container */
+    width: 75% !important;
+    /* Ensures stability across different browsers */
+    min-height: 40px !important;
+}
+/* Optional: Add a subtle border-radius to match the rest of your styled inputs */
+#inpaint_brush_color input[type="color"]::-webkit-color-swatch {
+    border-radius: 4px !important;
+    border: 1px solid #4d4d4d !important;
+}
+
+.elem_centre {
+    justify-content: center !important;
+}
+.elem_up {
+    margin-top: -10px !important;
+}
+
+#finished_images_catalog {
+    margin-left: -282px !important;
+}
+#program_name {
+    font-family: "Times New Roman", Times, serif !important;
+    font-size: 130% !important;
+    font-style: oblique !important;
+    font-weight: bold !important;
+    margin-top: -17px !important;
+    margin-left: 12px !important;
+    max-width: 270px;
+    opacity: 0; /* Initially hidden */
+    animation: fadeInOut 60s ease-in-out 0s; /* Apply the animation */
+    text-shadow: 1px 1px grey !important;
+}
+@keyframes fadeInOut {
+    0% {
+    opacity: 0; /* Start completely transparent */
+  }
+   20% {
+    opacity: 1; /* Fade In to fully opaque */
+  }
+   80% {
+    opacity: 1; /* Remain fully opaque before fading out */
+  }
+  100% {
+    opacity: 0; /* Fade Out to completely transparent */
+  }
+}
+
+.systemMsg {
+    position: absolute;
+    z-index: 1002;
+    top: 0%;
+    left: 0%;
+    right: 0%;
+    height: 45px;
+    overflow: auto;
+    user-select: none;
+    -webkit-user-select: none;
+}
+.systemMsgBox {
+    position: absolute;
+    left: 24px;
+    right: 24px;
+    top: 2px;
+    font-size: 12px;
+}
+.systemMsgBox::-webkit-scrollbar {
+    border: 1px !important;
+}
+.systemMsgClose {
+    position: absolute;
+    top: 0px;
+    right: 5px;
+}
+
+iframe::-webkit-scrollbar {
+    display: none;
+}
+
+#presetPreviewOverlay {
+    opacity: 0;
+    pointer-events: none;
+    width: 128px;
+    height: 128px;
+    position: fixed;
+    top: 0px;
+    left: 0px;
+    border: solid 1px lightgrey;
+    transform: translate(-140px, 20px);
+    background-size: cover;
+    background-position: center;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 5px;
+    z-index: 100;
+    transition: transform 0.1s ease, opacity 0.3s ease;
+}
+.preset-tooltip {
+    background-color: #fff8;
+    font-family: monospace;
+    text-align: center;
+    border-radius: 5px;
+    font-size: 12px;
+    max-width: 128px;
+    overflow: hidden;
+    line-height: 18px;
+}
+
+div.block.tokenCounter {
+    width: auto;
+    position: absolute;
+    right: 0.4em;
+    bottom: 0.4em;
+    padding: 0 0.5em;
+    opacity: 0.5;
+    color: var(--neutral-100);
+    background-color: var(--secondary-400);
+    border-radius: var(--radius-md);
+}
+div.block.tokenCounter div.wrap.center.full {
+    display: none !important;
+}
+div.prose.tokenCounter {
+    min-height: auto;
+}
+
+.identity_input textarea {
+    width: 180px;
+    padding: 3px 3px;
+    height: 32px;
+    margin: 3px 3px;
+}
+
+.iclight_source {
+    max-width: 100%;
+}
+
+#scrollable-box {
+    max-height: 100vh;  /* 设定最大高度 */
+    overflow-y: auto;   /* 启用垂直滚动条 */
+    position: sticky;   /* 设为sticky */
+    top: 0;             /* 设置sticky的顶部位置 */
+    scrollbar-width: thin !important;      /* Firefox */
+    -ms-overflow-style: -ms-autohiding-scrollbar !important;   /* IE 和 Edge */
+}
+
+/* 针对Webkit内核浏览器（如Chrome、Safari） */
+#scrollable-box::-webkit-scrollbar {
+    width: 5px !important;
+}
+#scrollable-box::-webkit-scrollbar-thumb {
+    background-color: transparent;
+    border-radius: 10px;
+}
+#scrollable-box::-webkit-scrollbar-track {
+    background-color: transparent;
+}
+#scrollable-box-hidden {
+    max-height: 100vh;  /* 设定最大高度 */
+    overflow-y: auto;   /* 启用垂直滚动条 */
+    position: sticky;   /* 设为sticky */
+    top: 0;             /* 设置sticky的顶部位置 */
+    scrollbar-width: none;      /* Firefox */
+    -ms-overflow-style: none;   /* IE 和 Edge */
+}
+
+/* main tabs sizing (Settings, Styles, etc.) */
+#scrollable-box-hidden button{
+    padding: 10px !important;
+}
+
+/* 针对Webkit内核浏览器（如Chrome、Safari） */
+#scrollable-box-hidden::-webkit-scrollbar {
+    display: none;
+}
+#scrollable-box-hidden::-webkit-scrollbar-thumb {
+    background-color: transparent;
+}
+#scrollable-box-hidden::-webkit-scrollbar-track {
+    background-color: transparent;
+}

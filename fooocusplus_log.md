@@ -1,0 +1,1010 @@
+# 1.1.6 Optimize Flux & Z-Image
+
+* Optimized Flux & Z-Image presets
+  * replaced the "ae" VAE with UltraFlux VAE
+  * except LowVRAM 4GGUF presets use the "ae" VAE
+* Introduced Z-Image Turbo All-in-One (AIO) support
+  * uses the presets: ZI-Turbo_AIO & ZI-TurboX_AIO
+* Introduced the LowVRAM_Plus preset category
+  to hold all the new 4GGUF presets:
+  * Flux1D_4GGUF, Flux1Krea_4GGUF & Flux1S_4GGUF
+  * HyperFlux1S4 & HyperFlux4
+  * ZI-BaseX_4GGUF & ZI-Base_4GGUF
+  * ZI-TurboX_4GGUF & ZI-Turbo_4GGUF
+* Low VRAM systems are now defined as < 7 GB
+* Replaced Krea Q5_1 GGUF model with Q5_K_M GGUF
+* Favourites are always displayed in the menu bar
+  * the LowVRAM category is no longer displayed there
+* There are now four available Favourite categories:
+  * Favorite - normal VRAM, Comfy available
+  * SDXL_Favorite - normal VRAM, Comfy not available
+  * LowVRAM_Favorite - LowVram, Comfy available
+  * SDXL_LowVRAM_Favorite - LowVRAM, Comfy not available
+* replaced config.default_bar_category with
+  common.preset_bar_category
+* Debugged a Windows Triton problem causing an error msg.
+  * patched ComfyUI-KJNodes node to resolve this error
+  * Triton is not used in FooocusPlus
+* Added library lists for Windows, Linux & Mac O/S:
+  * windows_requirements.txt
+  * linux_requirements.txt
+  * macos_requirements.txt
+  * added to the original file: requirements_versions.txt
+  * uv can now be used to test all three platforms
+  * there are now no dependency errors on any platform
+* Comfy Workflow Maintenance Report:
+  * added flux_base_4gguf
+  * added ZIB_4gguf & ZIB_shift6_4gguf
+  * added ZIT_4gguf & ZIT_shift6_4gguf
+  * added ZIT_AIO & ZIT_shift6_AIO
+  * renamed flux_base_fp8 to flux_base_AIO
+* Release Date: September 15th, 2026<br/>
+* Hotfix2: Debugged menu bar favourite category selection
+* Hotfix1: Debugged auto-download for 4GB_Default preset
+  * the Cheyenne & Pony presets now use the built-in VAE
+<br/><br/>
+
+
+# 1.1.5 Comfy Discontinued for Legacy GPUs
+
+* Comfy mode is now disabled for legacy GPUs
+  * legacy GPUs require PyTorch 2.5 or earlier
+  * ComfyUI no longer supports these GPUs
+  * all Comfy features are suppressed if Comfy is off
+* Forced Compatibility Mode provides Comfy access
+  * for legacy GPUs with at least 11 GB VRAM
+  * it promotes PyTorch 2.4 or 2.5 to PyTorch 2.7
+  * SDXL performance will be somewhat reduced
+* to support Pinokio, added --gpu_type none argument
+  * verified all dependencies using the uv utility
+* Performance Check documents all the new modes
+* the huge UserDir/models distribution is gone
+  * it is replaced by on-demand-downloading
+  * initial installation will be fast & reliable
+  * updated python_embedded to version 1.1.5
+  * python_embedded.7z now contains the startup files
+* Removed xformers except for legacy NVIDIA GPUs
+  * otherwise native (PyTorch) attention is used
+  * speed increase of 0.4% to 8% with PyTorch 2.7
+* Applied Blackwell specific tuning in launch.py
+  * AI estimates a 20% to 40% speed increase for
+    Blackwell GPUs but that remains to be seen
+* debugged issue with prompt not updating reliably
+* subfolders are now accessible to SDXL models & LoRAs
+* introduced three new SDXL compatible models:
+  * FinalCut Hybrid-JOY natural language Pony model
+  * IllustriousV4 Low VRAM model
+  * OpenDalle realistic fantasy model
+* Comfy Node Maintenance Report:
+  * Removed the unused & unsupported PuLID_ComfyUI
+  * Use the ZHO-ZHO-ZHO fork if needed in the future
+* Release Date: September 2nd, 2026<br/>
+* Hotfix7: Debugged auto-download for several models
+* Hotfix6: Linked the Transformation wiki article
+  * found below the Image Metadata Transform button
+* Hotfix5: Introduced Transform Image functions
+  * debugged FooocusPlus reinstallation errors
+* Hotfix4: Added async_worker Bypass reporting
+* Hotfix3: Introduced Lockout Bypass reporting
+* Hotfix2: Error control for Blackwell tuning
+* Hotfix1: Debugged Legacy GPU startup
+<br/><br/>
+
+
+# 1.1.4 Comfy Incompatible with Legacy GPUs
+
+* Comfy does not support PyTorch 2.5 or earlier
+  * FooocusPlus integrates Comfy for diverse model support
+    including Flux, HyDit, SD1.5, SD3.5 & Z-Image
+  * the Comfy upgrade to support Z-Image broke
+    compatibility with GPUs using PyTorch 2.5 & earlier
+  * PyTorch 2.5 and earlier are required by legacy GPUs
+  * legacy GPUs now have unsolvable problems in Comfy mode
+  * regrettably, Comfy mode will be disabled for these
+    GPUs in the near future
+  * FooocusPlus will continue to provide SDXL generative
+    AI for all the GPUs that it currently supports
+* debugged SDXL problems after using Z-Image presets
+* added ZI-TurboX_5GGUF & ZI-TurboX_4GGUF presets
+* the correct models are now shown for SD3.5 & Z-Image
+* debugged the Image Editor save function
+* moved loading/downloading from config.py to loader.py
+* removed the "Global Trap" from launch.py
+* reverted Onnxruntime from 1.20.1 to 1.20.0
+* Release Date: August 13th, 2026<br/>
+* Hotfix3: Prevent PyGit version flipping
+* Hotfix2: A slight adjustment to Comfy libraries
+* Hotfix1: Pinokio compatible library updates
+<br/><br/>
+
+
+# 1.1.3 Full Comfy LoRA Support & Base Model Restoration
+
+* users no longer have to download unused models
+  * downloading does not occur during preset selection
+  * models only auto-downloaded if used for Generation
+* added support for up to 6 LoRAs for all Comfy models
+  * To improve LoRA support in the DiT workflows:
+  - deleted the "CacheDitConfig" node to reduce noise
+  - added the "ModelPristineReset" node to clean VRAM
+  - this node makes images reproducible & noise-free
+* metadata loading is now faster & more reliable
+  * the process takes 4 seconds instead of 12
+  * added Clip Skip & Workflow fields to the metadata
+* improved the HTML log sorting to be more logical
+  * fields that are not applicable are filtered out
+* restored support for Kwai Kolors & KolorsFast
+  * these presets are in the new KwaiKolors category
+  * Kolors does not exist as a base model file
+  * it is assembled from 7 shards at runtime
+* restored SD3 support with SD3.5Medium & SD3.5Large
+  * these presets are in the new SD3x category
+  * also added SD3.5LgTurbo5 and SD3.5LgTurbo8
+* introduced Z-Image Base support
+* added Z-Image GGUF support for Base & Turbo
+  * added Z-Image Base presets for Q8 and Q5
+  * added Z-Image Turbo presets for Q8, Q5 and Q4
+  * "X" presets use "ModelSamplingAuraFlow" shift 6
+  * this variant increases detail on non-square images
+* added LoRA 8 step accelerated Flux presets:
+  * Flux1DFast, Flux1KreaFast and HyperFluxFast
+* debugged & sorted Sampler and Scheduler selectors
+  * all Samplers from Comfy 0.27.0 are now available
+* IC-Light now uses the UserDir/models/rembg path
+* preset selection defaults to first in the category
+  * unless config.enable_random_preset_in_category True
+* added a Gateway to open the Comfy UI from FooocusPlus
+  * this eases Comfy related FooocusPlus development
+  * accessed from Advanced/Expert Tools/Debugging
+* improved Base Model dropdown filename filtering
+* also improved LoRA filename filtering
+* changed "Forced Overwrite of" to simply "Override"
+* reconfigured the Override Sampling Step control
+  * reduced the maximum value from 200 to 100
+  * for Comfy presets, slider parameters are customized
+* also customized Guidance Control for Comfy presets
+* override with "Revert CFG & Step to Fooocus Standards"
+  * under the Debugging tab, it disables customization
+* upgraded Comfy from 0.26.0 to 0.27.0
+* Comfy Node Maintenance Report:
+  * Removed comfyui-cache-dit
+  * Patched ComfyUI-Kolors-MZ
+  * Patched ComfyUI-KwaiKolorsWrapper
+  * Added & edited ComfyUI-QwenImageWanBridge
+    (removed all nodes except z_image_encoder group)
+  * Created the "ModelPristineReset" micro-node
+* Comfy Workflow Maintenance Report:
+  * All workflows now include a 6 LoRA chain
+  * All DiT workflows include "ModelPristineReset"
+  * Deleted "CacheDitConfig" from all workflows
+  * Removed kolors_text2image1
+  * Removed kolors_text2image3
+  * Removed layerdiffuse_cond_api
+  * Removed layerdiffuse_fg
+  * Removed sd3_base
+  * Removed seamlesstiled_kolors
+  * Renamed kolors_text2image1 to kolors_text2image
+  * Renamed flux_base2_gguf to flux_base_gguf
+  * Upgraded sd3x_base for SD3.5 Large & Medium
+  * Added sd3x_base_gguf for SD3.5 Turbo support
+  * Added ZIB_gguf for Z-Image Base GGUF support
+  * Added ZIB_shift6_gguf for Base GGUF "X" variant
+  * Added ZIB for Z-Image Base support
+  * Added ZIB_shift6 for the Base "X" variant
+  * Renamed ZIT_DIT_TG to ZIT
+  * Added ZIT_shift6 for Turbo "X" variant
+  * Added ZIT_gguf to support Turbo GGUF models
+  * Added ZIT_shift6_gguf for Turbo "X" variant
+* Chinese-to-English prompt translation is not
+  applied to the HyDit, Kolors and Z-Image models
+* placed Create New Preset functions in an accordion
+  * located in Extras under Favorite Preset Control
+* Release Date: August 4th, 2026<br/>
+* Hotfix5: Improve Z-Image model file detection.
+* Hotfix4: Restore the Hotfix UI announcement
+* Hotfix3: Removed the phantom ZI-Base category
+* Hotfix2: Added Preset info to Performance Check
+* Hotfix1: Added the ZI-Base & ZI-BaseX presets
+  * ZI-Base & ZI-Turbo are now in separate categories
+<br/><br/>
+
+
+# 1.1.2 Comfy Upgrade & Z-Image Turbo Support
+
+* upgraded Comfy from 1dba801 to 0.26.0
+* introduced Z-Image Turbo DIT support
+  * the preset & workflow are from Thomas Gaud (modified)
+  * the ZI-TurboDIT preset is in the Alternative category
+* Comfy Node Maintenance Report:
+  * Removed AIGODLIKE-COMFYUI-TRANSLATION
+  * Removed ComfyUI-SUPIR
+  * Removed ComfyUI_bnb_nf4_fp4_Loaders
+  * Removed simpleai-seamless-tiled
+  * Updated comfyui_controlnet_aux-main
+  * Updated ComfyUI_UltimateSDUpscale
+  * Updated ComfyUI-Advanced-ControlNet
+  * Updated ComfyUI-Easy-Use
+  * Updated ComfyUI-GGUF
+  * Update ComfyUI-IC-Light
+  * Updated ComfyUI-KJNodes
+  * Updated ComfyUI-layerdiffuse
+  * Updated rgthree-comfy
+  * Added comfyui-cache-dit
+* Comfy Workflow Maintenance Report:
+  * Removed flux_base_nf4
+  * Removed flux_base_nf4_2
+  * Removed seamlesstiled
+  * Added ZIT_SIMPLE_DIT
+  * Renamed ZIT_SIMPLE_DIT to ZIT_DIT_TG
+  * Renamed SD_SIMPLE to sd15_TG
+* updated requirements_version.txt for Comfy
+  * but omitted PyOpenGL & glfw for 3-D modeling
+* added comfy_patch for compatibility with FooocusPlus
+* removed PyTorchLightning & Fabric which are now redundant
+* Comfy does not support bnb-nf4 Flux models
+  * replaced their presets with FP8 versions
+  * also introduced the Flux1Diverse FP8 preset
+* removed the unsupported Comfy TileJuggXI Tiling preset
+* introduced native tiling, applicable to any SDXL model
+  * enable from the Advanced tab Image Control accordion
+* upgraded IC-Light to the latest version
+* added clip_download support throughout the repo.
+* improved startup logic for newly released versions
+* Release Date: June 29th, 2026<br/>
+* Hotfix7: Fixed Flux workflows: removed NF4 references
+* Hotfix6: Simplified Comfy custom_nodes verification
+* Hotfix5: Fixed path error in custom_nodes updating
+* Hotfix4: Advanced work on Comfy custom_nodes updating
+* Hotfix3: Further work on Comfy custom_nodes updating
+* Hotfix2: Further improvements to custom_nodes updating
+* Hotfix1: Improved custom_nodes updating
+  * restored bitsandbytes_default to "0.49.2"
+<br/><br/>
+
+
+# 1.1.1 IMPORTANT: Click "Check Performance" under the Extras tab!
+
+* introduced full support for Blackwell 50xx GPUs
+  * Blackwell GPUs are detected automatically
+  * Torch 2.10.0 with CUDA 13 will be installed
+  * CUDA 13 requires a video driver version >=580.65
+* for non-Blackwell NVIDIA GPUs:
+  * CUDA 13 is about 6.3% slower for Flux models
+  * CUDA 13 is about 2.6% faster for SDXL models
+  * to force CUDA 13, use run_FooocusPlus_cu130.bat
+* "Check Performance", under the Extras tab, supports:
+  * NVIDIA video driver version detection
+  * CUDA compatibility checks
+  * optional GPU reconfiguration
+  * performance metrics for the last generative batch
+* introduced the Remove Torch Components Debugging option
+* added OK/Cancel options for Toolbox View & Load Log
+  * View Log Info was previously called "View Info"
+  * Load Log Info was previously called "Regenerate"
+* debugged History Gallery & regeneration problems
+* introduced Save/Cancel options for Make New Preset
+* in Make New Preset, debugged "Save the Current Resolution"
+* added "Overwrite the Current Prompts" in Make New Preset
+* introduced eight Fooocus FreeU presets:
+  * A: Automatic1111 Default
+  * B: Realistic Portraits
+  * C: Minimal
+  * D: FooocusPlus Default - Realism
+  * E: Creator's Default - Fantasy
+  * F: Original Fooocus - Subtle
+  * G: GreyScope Default
+  * H: SD1.5 Default
+* relocated FreeU controls from Expert Tools to Input Image
+  * the FreeU sliders can override the preset values
+  * custom presets can be added to UserDir/user_substyles
+  * Restore Preset Values returns the sliders to default
+  * the FreeU interface now contains help info. and links
+* Image Grids are now treated as generative images
+  * they contain the metadata of the first image in the batch
+  * Image Grids are logged with the first image metadata
+  * Grids are Recovered the same way as generated images
+* images from the Image Editor now appear in the log
+  * the log displays the metadata from the source image
+  * Image Editor metadata can be used for regeneration
+* introduced the Apply Variable Outpaint Extension option
+  * if enabled the extension in one direction is up to 100%
+  * and in two directions it is up to 50% each
+  * the variable extensions are adjusted by sliders
+  * if disabled, the extension is 30% in each direction
+  * variable extension is not available for 3 or 4 directions
+* the Fooocus V2 GPT-2 expander now works in Comfy mode
+* introduced Fooocus V2 substyles (alternate word lists)
+  * using a substyle, Fooocus V2 expansion can be redirected
+  * substyles are selected at the bottom of the Styles list
+  * each substyle contains at least 640 words
+  * substyles are logged in the new Substyle field
+  * regeneration uses the correct substyle
+  * user substyles can be added to UserDir/user_substyles
+  * the words in a substyle come from a master dictionary
+  * Refresh All Files can add substyles during program ops.
+* presets can use the optional v2_substyle field
+  * if v2_substyle is not present, falls back to "Default"
+  * the 3 fantasy presets now use "Spellcasting Druid"
+  * all other V2 using presets use "Default"
+* These are the new substyles:
+  * Default: the original unchanged wordlist
+  * Lovecraftian Damnation: Poe, Ambrose Bierce, Lovecraft
+  * Sci_Fi: science fiction including cybernetics
+  * Spellcasting Druid: natural magic and alchemy
+  * Unlit: similar to Default but no lighting cues
+  * Victorian Steampunk: equally Victorian and Steampunk
+* IC-light can now use the Fooocus V2 style
+  * IC-Light will auto-select the "Unlit" substyle
+  * debugged IC-Light selection after using Input Image
+* Image Type is now recorded in the log, as follows:
+  * Text-to-Image, the default
+  * Enhance
+  * Fooocus FreeU
+  * IC-Light
+  * Image Grid
+  * Image Editor
+  * Image Prompt
+  * Inpainting
+  * Outpainting
+  * Upscale or Variation (UOV)
+* improved the Mix Image Prompt functions
+* Image Prompt now has a "Clear Image Prompts" selector
+* moved the ControlNet sliders to the Image Prompt section
+  * they were located under the Expert Mode Control tab
+* moved GroundingDINO Erode or Dilate to Advanced SAM Options
+  * it was located under the Expert Mode Inpaint tab
+* grouped the Expert Inpainting Tools in a new accordion
+  * moved Inpaint Engine and Disable Initial Latent here
+  * it was located under the Expert Mode Inpaint tab
+* added three new documentation links to Inpaint or Outpaint
+* grouped all the Expert Mode debug tools under "Debugging"
+  * introduced a Debug Substyles option to Debugging
+* replaced args manager "--theme" with "--mode"
+  * the UI dark/light selector is now named "Background Mode"
+* renamed "config.default_image_prompt_checkbox" to:
+  * "config.default_input_image_checkbox"
+  * the user config.txt setting may need to be adjusted
+* image buffers are no longer auto-cleared
+  * this prevents "dead" images in Input Image modes
+* Release Date: June 19th, 2026<br/>
+* Hotfix4: Eliminated a possible security issue with HyDiT
+  * rewrote the HunyuanDiT hydit_task.py module
+  * for Linux, set all requirements to specific versions
+* Hotfix3: Clarified Check Performance popup
+* Hotfix2: debugged Blackwell 50xx generation problem
+  * debugged divide-by-zero in Performance Metrics calculation
+* Hotfix1: Corrected updating error
+<br/><br/>
+
+
+# 1.1.0 Improved Image Catalog Control, Logo Welcome Option & Reliability Upgrades
+
+* contains some features retrofitted from the Gradio 5.5 project
+* introduced a Catalog Control accordion, under the Advanced tab
+  * including:
+  * Enable the Images Catalog (it is now an optional feature)
+  * Quantity of Catalog Pages
+  * Quantity of Images per Page
+  * Copy Prompts While Switching Images
+  * Enable Catalog Toolbox
+* a dynamic Logo can be used as the Welcome image
+  * under Extras, select "Use Logo Welcome Image" to enable
+  * uses file manipulation, so a config.txt option is not needed
+* simplified webui/async_worker data transfers
+  * 156 items, including lists, were involved in stack transfers
+  * the stack transfers has been reduced by 50% to 78 items
+  * config and common shared variables replaced stack transfers
+  * improves maintainability, readability, reliability & efficiency
+  * in the worst case, images were transferred through the stack
+  * stack image transfers created two extra duplicates in memory
+  * both system RAM and VRAM (indirectly) were consumed unnecessarily
+* improved UI stability by enforcing rational Python indentation
+  * most event handlers and helpers were moved out of UI inline coding
+* debugged and improved Image Editor controls, especially transparency
+  * transparency controls preview immediately
+  * transparency only activates when Apply Transparency is selected
+  * the new Restore Original button returns your input image
+* if appropriate, used release event handlers to improve stability
+* fixed bug with disable_image_log preventing image generation
+* re-enabled the Metadata Scheme selector
+* restored jpeg and webp file save formats
+* debugged and improved Preset loading, especially during startup
+* in the Inpainter, Mask Erode or Dilate is now always available
+* fixed bug with IC-Light not working and causing Input Image errors
+* simplified and improved the IC-Light user interface
+  * removed the Layer Method and Enable options from the UI
+  * improved prompt formatting
+  * enabling IC-Light no longer forces 1024x1024 resolution
+* introduced the Refiners preset category for refiner based presets
+  * moved SDXL from the General category to Refiners
+* introduced the Elsewhere-J9 preset for more realistic faces
+  * uses the Elsewhere base model with Juggernaut9 as the refiner
+  * the Elsewhere-J9 preset is located in the Refiners category
+* similarly, the Magick-J9 provides realistic fantasy
+  * it uses the Magick base model with Juggernaut9 as the refiner
+* and lastly, Elsewhere-SD1.5 provides SD1.5 access without Comfy
+  * ElsewhereXL is the base model with RealisticVision as refiner
+* replaced "Aspect Ratio" label with "Resolution | Aspect Ratio"
+* clarified Inpaint mode descriptions
+* deleted the Remove the Disable Intermediate Results option
+  * it was inoperative & redundant, use Disable Preview instead
+* the ADM Scaler controls are moved to the end of Expert Tools
+* Release Date: May 4th, 2026<br/>
+* Hotfix8: Regeneration no longer causes the topbar to right-shift
+* Hotfix7: Restored the Image Editor Save function
+* Hotfix6: Debugged the Inpaint auto-mask SAM prompt
+* Hotfix5: Debugged "Mix Image Prompt & Inpaint" or "Vary/Upscale"
+* Hotfix4: The default_max_lora_number config.txt option now works
+* Hotfix3: Restored Image Prompt operation
+  * improved Toolbox error control
+  * introduced full date strings for Catalogue indexing
+* Hotfix2: Debugged the Toolbox and Image Prompt type selectors
+* Hotfix1: Fixed a bug with with the Image Editor not saving
+  * also added startup version control for major updates<br/><br/>
+
+
+# 1.0.9 Add/Remove to/from Favourites, Batch Generation, Image Editor, Image Grids, Image Recovery, New Styles & UI Popup Messages
+
+* introduced Add/Remove Current Preset to/from Favorites
+  * for new users, the Favorites are: Default, Cheyenne18,
+  * Flux1Krea_8GGUF, HyperFlux1S8 and HyperFlux5
+  * these Favorites can be added with the Restore Favorites button
+* the Flux preset categories now less abbreviated:
+  * Flux1Dev, Flux1Krea, Flux1Schnell and HyperFlux1D
+  * both HyperFlux Schnell presets are now in the Flux1Schnell category
+* introduced Image Recovery to restore images lost in a crash or deletion
+  * temporary images are removed during the generative cycle, not at launch
+* introduced Batch Generate to the new Batch Control accordion in Settings
+* Batch Generate is supported by a Batch Count slider, varying from 1 to 25
+  * Batch Generate restarts image generation the specified number of times
+  * it is ideal for creating multiple Image Grids
+  * Batch Generate also works as an Image Quantity multiplier
+* the Generate Image Grid feature is upgraded to save grids to Outputs
+  * grids are optimized to avoid the creation of partial rows
+  * aspect ratio awareness is used to make the grids as square as possible
+  * grid size is controlled by Image Quantity and limited to 16 images
+  * the grid may be viewed in the Catalog but not in the log file
+  * the Generate Image Grid control is located in the Batch Control accordion
+* under the Main Prompt box, introduced the Features option to hold:
+  * IC-Light and the Image Editor
+  * unlike Input Image, these functions are always available
+* the Image Editor is composed of five optional dropdowns:
+  * Adjustments include Brightness, Contrast, Hue, Saturation & Sharpness
+  * Transformations can resize, flip and crop the image
+  * Transparency options create a transparent image or an invisible background
+  * Composite images can be created by positioning overlays on a base
+  * Effects include Blurs, Edge Enhance, Posterize & Solarize
+  * all image functions preserve image metadata, if any
+* Prompt Array processing now correctly removes leading & trailing spaces
+* changed the Prompt Array separator from the comma to the vertical bar,
+  * adjustable in config.txt with the "prompt_array_separator" parameter
+* introduced new Info and Warning UI popups to support these features:
+  * Batch Generate, Image Grid, Make New Preset, Model Downloads,
+  * Recover Images, Refresh All Files and Version Updates, etc.
+* an audio Notification can occur at the end of a generative batch
+  * this option is set by "Enable Audio Notification", under Extras
+  * also set by "audio_notification": true in config.txt
+  * by default, notification uses the original Fooocus mp3 sound clip
+  * UserDir/master_audio contains 11 alternative notification files
+  * any mp3 placed in UserDir/user_audio will be chosen at random
+  * also the "Refresh All Files" button makes a new random selection
+* for Welcome images, user png images now override the built-in jpgs
+  * the logo, white and black pngs are found in UserDir/control_images
+* the Advanced tab Image Control accordion now contains these functions:
+  * Recover Images, Image Format, Save Metadata to Images, Metadata Scheme,
+  * Disable Image Log, Show Newest Images First, Disable Preview,
+  * Black Out NSFW & Save Only the Final Enhanced Image
+* regenerating images from the log, image metadata or gallery work correctly
+  * the Current Preset field is updated correctly
+  * Apply Metadata and Load Parameters now work correctly with Flux models
+* moved all args_parser command line argument coding to args_manager
+  * deleted args_parser.py, options.py and latent_visualization.py
+* corrected args.directml coding so that it properly sets the device ID
+* deleted the arguments that were unused, redundant or compromised security:
+  * --cache-path, --debug-mode, --disable-analytics,
+  * --disable-enhance-output-sorting, --disable-header-check,
+  * --disable-image-log, --disable-server-log, --enable-auto-describe-image,
+  * --external-working-path, --is-windows-embedded-python, --listen,
+  * --location, --multi-user, --port, --share, --preview-option, --webroot,
+  * --web-upload-size (some of these were removed in previous versions)
+* now args.disable_comfyd completely prevents the use of Comfy
+* config.default_comfy_active_checkbox or the UI control toggles Comfy use
+  * the config.default_comfyd_active_checkbox is gone: incorrect default
+* moved all config defaults to modules.config from enhanced.all_parameters
+  * deleted enhanced.all_parameters.py
+* "Make New Preset" can now correctly replace the Default preset
+  * improved the button's appearance, it is now similar to "Image Recovery"
+* there is now the option to "Save the Current Aspect Ratio" in the new preset
+* startup preset batch files now set all parameters correctly
+  * introduced the Flux1Krea8 and SD1.5_RealVis startup batch files
+  * replaced the Juggernaut & HyperFlux presets with Juggernaut8 & HyperFlux5
+* the Custom startup batch file and the Custom preset have been removed
+* added the Rossetti Steampunk, Science Fiction and World styles
+* added 36 new TaffyCarl (Carl Bratcher) styles(!) and updated the Stylesheet
+* fixed the Styles menu so that it properly displays acronyms & initials
+* moved four functions from webui to modules.ui_util to reduce module bloat:
+  * sort_enhance_images(), generate_clicked()
+  * inpaint_mode_change(), enhance_inpaint_mode_change()
+* added two new functions to modules.ui_util:
+  * init_batch_counter(), update_batch_counter()
+* resolved a bug with the Preset Bar checkbox not working
+* reduced the tab width (Settings, Styles, etc.) to accommodate languages
+* simplified the "up-to-date" console message, removing the coded part
+* program name & version now appears in the bottom left corner of the canvas
+* System Information now displays the Gradio version
+  * removed the Gradio footer as it was conveying no useful information
+* Tech Note: "special" enhanced.toolbox CSS moved to standard style.css file
+* Release Date: December 23rd, 2025<br/>
+* Hotfix16: Introduced a bugfix for the newest RTX 50xx GPUs
+* Hotfix15: To avoid CivitAI problems, all presets download from Hugging Face
+* Hotfix14: Bugfix for multiple LoRAs and LoRA Inpainting
+  * also fixed "Click Twice to Generate" bug
+  * reverted Pillow 11.0.0 to Pillow 10.4.0 for Linux compatibility
+* Hotfix13: Restored the --listen and --port arguments for future features
+  * if these arguments are used a warning & Security Report are produced
+  * provided earlier access to UserDir/batch_startups during installation
+  * updated the TorchRuntime installation utility to version 2.1.0
+* Hotfix12: Bugfix for invalid OS names in Linux
+* Hotfix11: Added Masking Model selector to Remove Background
+  * Remove Background now defaults to isnet-general-use
+  * added the birefnet-general masking model for Inpaint/RemBG
+  * on first use of birefnet-general there will be a download delay
+* Hotfix10: Bugfix for EditFormat config parameters
+  * introduced Wildcards Wiki link
+  * reformatted Generate Wildcard Contents in Order
+* Hotfix9: Upgraded rembg to 2.0.69: no more console errors!
+  * also upgraded the Pillow graphics library to 11.0.0
+* Hotfix8: UserDir "master_" dirs. are now called "reference_"
+  * these directories were not real masters, only for reference
+* Hotfix7: introduced UserDir/user_wildcards directory
+  * UserDir/user_wildcards can override built-in wildcards
+  * the UserDir/wildcards directory has been deleted
+  * any custom wildcards were saved to UserDir/user_wildcards
+  * removed "path_wildcards" from config.txt options
+  * also removed "temp_path_cleanup_on_launch" from config
+  * in the canadian & ethnic wildcards, replaced Afro with African
+    (this reduced the obsession with Afro hairstyles)
+  * improved some UI formatting in the Editor & Extras
+* Hotfix6: added TC coloured pencil, rock horror & space styles
+  * in the Editor, added "Copy to Source", "Copy to Base" & "Save Metadata"
+  * the Editor now uses these config options: "edit_contain_overlay",
+  * "edit_output_format" & "edit_save_metadata_to_images"
+* Hotfix5: In the Editor, added "Remove Transparency"
+  * introduced bug fixes for mislabelling of the "Generate" button
+* Hotfix4: In the Editor, added "Erase Image" to create transparencies
+  * "Percent Transparency" now preserves the underlying image when 100%
+  * corrected a formatting error in Transparency created by Hotfix3
+* Hotfix3: Added "Clear Favorites" to the Favorite Preset Control accordion
+  * the new Favorite Preset Control accordion is located under the Extras tab
+  * removed the preset_bar_category_tracking option from config parameters
+  * added release dates to all FooocusPlus versions, if applicable
+* Hotfix2: Re-enabled the Preset Bar checkbox & reformatted the checkbox row
+  * under the Metadata tab, linked to the Image Regeneration Wiki article
+* Hotfix1: Fixed a bug with Upscale/Variation & Describe
+  * revised the Overlay help text
+  * improved "Apply Metadata from Image" logic<br/><br/>
+
+
+# 1.0.8 Prompt Translation
+
+* installs any of 40 language packs available from Argos Translate
+* prompt translation is automatic or may be manually selected from the UI
+* most messages in the console window are interpreted in the selected language
+* most dynamic status messages shown in the UI are also interpreted
+* Wildcard names and a controlled amount of Wildcard Contents are interpreted
+* the number of interpreted lines is set in Extras and in config.txt
+* in the UI, the number of Wildcards per page is increased from 28 to 35
+* the "Refresh All Files" button now adds new Wildcards to the display
+* the Translate feature may be disabled from an Extras option or in config.txt
+* removed Translators 5.8.9 from requirements file and the Python library
+* the French language UI is now complete
+* samples of all available styles are shown in the Styles Documentation link
+* this link has a nudity warning, due to 6 NSFW images out of a total of 1104
+* due to the NSFW content, this link is removed if "black_out_nsfw" is enabled
+* moved the "Mask Erode or Dilate" control from Expert Mode to Inpaint/Outpaint
+* "Mask Erode or Dilate" is available only if "Enable Advanced Masking" is checked
+* removed the "allow_custom_value" option from the Sampler and Scheduler controls
+* "zh" is the language detector for Simplified Chinese but "cn" is accepted
+* Release Date: September 13th, 2025<br/>
+* Hotfix6: Gradio information moved from footer to System Information
+  * prepared enhanced.version module for FooocusPlus 1.0.9
+* Hotfix5: introduced error control on FreeU values during Save Preset
+* Hotfix4: the Stylesheet is reformatted and supports all FooocusPlus styles
+  * replaced the nude and questionable images; removed the nudity warning
+  * also improved the messaging when using an obsolete Python library
+* Hotfix3: restored the proper detection of Windows and python_embedded
+  * this change enable the python_embedded version to be reported correctly
+  * updated language information in the FooocusPlus readme file
+* Hotfix2: removed unnecessary console message to restart to finish updating
+  * added console message if fallback to "karras" occurs and updates common
+* Hotfix1: added console message to restart to finish updating
+  * in sample_hijack.py, falls back to "karras" if scheduler error<br/><br/>
+
+
+# 1.0.7 Flux1 Krea & Enhancements
+
+* introduced three presets: Flux1Krea, Flux1Krea_5GGUF and Flux1Krea_8GGUF
+* these presets are located in the new Flux1Krea Preset Category
+* added the Spanish language user interface
+* a version information link is now available below System Identification, in Extras
+* introduced Hotfix identification, displaying a fourth digit in the version string
+* Linux users now use the appropriate Xformers version. No change for Windows users
+* debugged and updated support for AMD graphics card users
+* added HF-Mirror support for Chinese users, in the two Chinese batch files
+* to reduce image distortion, the main canvas is now set for a minimum height of 300px
+* updated python_embedded version to 1.06 (current users are already updated)
+* Release Date: August 13th, 2025<br/>
+* Hotfix20: added a diagnostic to test a user problem with LoRA loading
+* Hotfix19: a disabled Preset Bar no longer reappears when changing presets
+* Hotfix18: added three point error control for Scheduler values
+* Hotfix17: using the --output-path startup argument no longer causes an error
+* Hotfix16: fixed a bug in Windows detection that affected Linux users
+* Hotfix15: fixed a bug with loading Xformers - improved verify_installed_version()
+* Hotfix14: introduced the CheyenneAlt preset in the Illustrative category
+  * also updated the English UK language file & cleaned up the startup code
+* Hotfix13: improved error handling for PyGit2 verification
+* Hotfix12: PyGit2 is now verified before updating FooocusPlus
+* Hotfix11: added Insightface wheel for Linux and macOS
+* Hotfix10: Inpainting help popup uses correct text in English & Spanish
+* Hotfix9: added the Flux1Krea_FP8 preset
+  * users can add or amend languages with the UserDir/user_language directory
+  * hotfix numbers can now exceed 9
+* Hotfix8: removed the Flux1Krea preset due to unreliability
+  * the Spanish language user interface (UI) is now complete
+  * fixed a bug with Inpainting that in some cases prevented use of the Inpainting model
+* Hotfix7: fixed a "NoneType" error with Inpainting, initialized Argos Translate
+* Hotfix6: fixed another "assert" bug with Inpainting
+* Hotfix5: UI now supports full translation
+* Hotfix4: fixed a bug with some Performance options causing an error
+* Hotfix3: removed the assert statements from Inpainting: it uses error control instead
+  * added the Elsewhere preset to the General Category, a backup for the Default preset
+  * this is to encourage the creation of a user created Default to suit individual needs
+  * removed the "test" Random Prompt Topic and rationalized the random prompt names
+* Hotfix2: fix the version numbering problem
+* Hotfix1: fix startup update problem<br/><br/>
+
+
+# 1.0.6 Bug Fixes & UI Refinements
+
+* removed the following components that are not suitable for production code:
+  * launch_support.build_launcher() and launch_with_commit.py
+  * run_FooocusPlus_commit.bat & run_FooocusPlus_dev.bat (auto-delete)
+* introduced the "--gpu-type" command line argument
+* run_FooocusPlus_cu124.bat demonstrates gpu_type = "cu124"
+* restored run_FooocusPlus_FR.bat for French language support
+* corrected the Flux1S preset to use the "flux_base" task_method
+* the base model list "flux_base2_gguf" method now includes "schnell" in the filter
+* created Hyperflux Schnell models, represented by the HyperFlux1S5 & HyperFlux1S8 presets
+* HyperFlux1S5 is in the Flux1S category and HyperFlux1S8 is in the HyperFlux category
+* added a "Tiny Pack" for 4GB VRAM users and a "Schnell Pack" to the Hugging Face archives
+* moved the Cheyenne preset to the General category and renamed it Cheyenne18
+* introduced the Custom preset into the Favorite category, set for Custom Performance
+* the Custom preset also specifies a 16*9 aspect ratio and an image quantity of 10
+* the Custom preset is supported by run_Custom.bat in the batch_startups directory
+* when switching aspect ratio templates, Default toggles to Custom instead of Cheyenne
+* when switching presets, the positive and negative prompts are preserved
+* if available, positive and negative prompts specified in presets are utilized
+* the Negative Prompt field is now just below the Preset selectors so that is always visible
+* the main prompt automatically extends to accomodate long prompts, like original Fooocus
+* the extended prompt field makes editing more practical and reduces errors
+* similarly, image quantity settings are preserved during preset switching
+* and image quantity values specified in a preset are used, if available
+* restored the function of the Sampler and Scheduler dropdowns
+* fixed an intermittent error with the Scheduler Name during image generation
+* overwriting the aspect ratio width and height values no longer produces a console error
+* introduced the Juggernaut8 and Juggernaut9 presets
+* renamed the existing Juggernaut preset to "JuggernautXI"
+* added the Rossetti Painting, Rossetti Drawing and Rossetti Sketch styles
+* restored the correct operation of LoRAs in Flux presets
+* restored the operation of preset aspect ratios
+* if an aspect ratio height value is missing, it will be rebuilt
+* increased the width of the Base Model and Refiner dropdowns
+* the Refiner dropdown is invisible in Comfy modes such as Flux (instead of non-interactive)
+* increased the width of the LoRA selector dropdowns and grouped each LoRA separately
+* "Output Format" is renamed "Image Format" and moved to the Advanced tab
+* the Metadata settings are moved from Expert Mode and grouped with Image Format
+* the old Fooocus Documentation link has been removed from the Advanced tab
+* new Forum (Pure Fooocus) and Wiki links are grouped with the Image Log link
+* adjusted the Guidance Scale (CFG) slider from a 0.001 to a 0.1 step increment
+* adjusted the Image Sharpness slider from a 0.001 to a 0.1 step increment
+* if a directory is not accessible, the program no longer tries to rename it ".corrupted"
+* in support of UK users, all presets referring to CivitAI links now refer to the FooocusPlus repo
+* Release Date: July 28th, 2025<br/>
+* Hotfix5: removed the non-destructive error condition when using Describe
+* Hotfix4: improved legacy graphics card support
+* Hotfix3: "Refresh All Files" correctly adds new LoRAs and does not cause an error
+* Hotfix2: Linux is finally functional: dependency errors and non-compliant coding were resolved
+* Hotfix1: restored the visibility of the Stop & Skip buttons during generation<br/><br/>
+
+
+# 1.0.5 Bug Fixes & Enhancements
+
+* fixed a bug that prevented installation of FooocusPlus to a subfolder
+* FooocusPlus may now be installed to a subfolder, regardless of the parent folder's name
+* restructured config.txt for more consistency, reliability and operating system compatibility
+* several config.txt options now fit their UI equivalents, e.g. "Image Quantity" not "Image Number"
+* config.txt now uses pathlib Path to itemize model folders
+* the user must delete config.txt and config_modification_tutorial.txt to activate the changes
+* the UI now has a "Custom" Performance option which defaults to 15 steps
+* "Custom" is adjustable in config.txt with custom_performance_steps, from 1 to 200 steps
+* the Refiner dropdown no longer lists Flux models
+* the "Refiner Switch At" settings are no longer ignored
+* restored IC-Light operation
+* fixed an obscure bug with preset switching when recreating a specific image
+* restored Save Preset operation and made the Save Preset functions Linux compatible
+* added the female_hair, male_hair and hair (unisex) wildcards
+* updated pytorch-lightning and lightning-fabric from version 2.5.1 to 2.5.2
+* removed a misleading and incorrect error message during first time installation
+* now using a "fooocusplus" temporary folder to avoid possible conflicts with mainline Fooocus
+* removed the Kolors presets because they are not working: Kolors support will return in the future
+* all batch startup files now contain a note about copying them to the FooocusPlus directory
+* removed the HF Mirror argument from the Chinese batch files, it was causing an error
+* fixed a bug with Clip Skip that affected some users
+* xformers installation now uses verify_installed_version() rather than Torchruntime
+* Release Date: July 1st, 2025<br/>><br/>
+
+
+# 1.0.4 Bug Fix for Incorrect Model Paths & Installation Corruption by AMD Support
+
+* resolves the bug with incorrect secondary paths to the models folders
+* the user must delete config.txt and config_modification_tutorial.txt for this fix to take effect
+* once the config text files are deleted then FooocusPlusAI\UserDir is automatically removed
+* directml support for AMD video cards is deleted if not required
+* the presence of directml files in the Python libraries was sabotaging NVIDIA installations
+* in the GUI, "Forced Overwrite of Sampling Step" is grouped with Performance Options
+* to reduce clutter, the Performance Options are now available from an accordion
+* Release Date: June 15th, 2025<br/><<br/>
+
+
+# 1.0.3 Critical Bug Fixes & NVIDIA 50xx Support
+
+* introduced full support for NVIDIA 50xx video cards
+* now using Torchruntime 1.18.1, Torch 2.7.1 and Xformers 0.0.30
+* full Torch information is now listed in the console, including the CUDA variant
+* the bug with Aspect Ratio selection has been resolved
+* the Random Preset Category selector now works reliably
+* a slight slot machine effect may occur during the randomization process
+* when switching between Preset Categories, a new preset is selected at random
+* there is now a HyperFlux Preset Category, bringing the total to 12 categories
+* the occasional hangups in Flux mode no longer occur
+* checks for required library files are now done at the start of the launch
+* the checks allow for requirements to be exceeded if marked with a ">="
+* the library files have been cleaned up and several items have been updated
+* these library updates will automatically install during launch
+* these changes are also available in the python_embedded archive at Hugging Face
+* the image seed options are now accessed through the Image Seed Control accordion
+* Release Date: May 23rd, 2025<br/><br/>
+
+
+# 1.0.2 LowVRAM Support
+
+* LowVRAM Preset mode activates if VRAM<6GB
+* also, LowVRAM Preset mode is set by config.txt "default_low_vram_presets": true
+* in this mode, the default category is LowVRAM and the preset is 4GB_Default
+* the 4GB_Default preset now uses Segmind-Vega in normal mode
+* the VegaRT preset operates Segming-Vega in "Real Time" mode
+* Styles can now be configured in UserDir, like Presets and Topics
+* Release Date: about May 22nd, 2025<br/><br/>
+
+
+# 1.0.1 Maintenance Update
+
+* pytorch-lightning now loads correctly
+* resolved the "Fooocus' is not a valid MetadataScheme" error
+* the user structure module now sets up the UserDir folders in a Linux compatible way
+* fixed a bug that was partially installing python_embedded within the program directory
+* this phantom python_embedded folder is automatically deleted if present
+* from 1.0.0, Flux models are installed in either the "FluxDev" or "FluxSchnell" folders
+* if an obsolete "Flux" folder is found and it is empty, it is automatically deleted
+* Release Date: about May 22nd, 2025<br/><br/>
+
+# 1.0.0 Welcome to FooocusPlus 1.0.0!
+
+* removed the irrelevant Fooocus and Simple version information. FooocusPlus does not synchronize with either of them
+* removed legacy upstream references and moved the master subfolders to a new masters parent folder
+* like mainline Fooocus, there are now two metadata schemes: "Fooocus" and "A1111". The confusing "Simple" label is gone
+* if an image is stored with A1111 metadata, the Apply Metadata button is disabled instead of creating an error
+* added Torch, CUDA and xformers data to System Information, under the Extras tab
+* fixed a bug that prevented reinstallation of Torch if its folder was not found
+* the various master folders are now subfolders of the new "masters" folder
+* by default, all presets except for SD1.5 now use a 0*0 aspect ratio, meaning that it does not have any effect
+* but as before, if a valid aspect ratio is set in a preset it overrides the current UI setting
+* as presets are changed, by default the UI setting for aspect ratio does not change
+* there are now four sets of aspect ratios defined in config.txt, the Standard, Shortlist, SD1.5, and PixArt templates
+* the default settings for these templates are used for initial values but they do not override setting changes in the UI
+* by default FooocusPlus starts with the Shortlist template, a Standard template that is simplified to only 15 values
+* this default can be changed using the "enable_shortlist_aspect_ratios" config.txt setting
+* the UI can toggled between Shortlist and Standard templates with the "Use the Aspect Ratio Shortlist" checkbox
+* the SD1.5 presets change the aspect ratio display to the SD1.5 template
+* when PixArt Sigma is introduced, a preset will select the PixArt template
+* when switching between presets the UI attempts to keep the currently selected aspect ratio, and width and height too
+* introduced and tested the "experimental" SDXL 1280*1280 aspect ratio, available from the Standard template
+* introduced both Preset Categories and Presets dropdowns under the Settings tab
+* the Preset Categories are: Alternative, Fantasy, Favorite, Flux1D, Flux1S, General, Illustrative, LowVRAM, Pony, Realistic & SD1.5
+* the Category structure is duplicated to the User Directory. Changes in this directory will update the working preset folder
+* the Categories are actually folders. If a preset file is located in a folder it will show up in that category
+* presets can be stored in more than one category (folder) if desired
+* the Make New Preset button, under the Extras tab, saves the current settings to a new preset, stored in the User Directory structure
+* if the new preset is given the same name as a built-in one it will override it
+* if the Random category is selected a random preset is chosen
+* all presets may be displayed at once if the All category is selected
+* the Current Preset is now listed just below the Generate button
+* if Favorites is checked (the default) the favorite presets are shown in a horizontal menu bar located above the main canvas
+* the current preset is now stored in the log
+* FooocusPlus starts with the Default preset, unless low VRAM is detected in which case it starts with 4GB_Default
+* the VRAM 4GB_Default preset can also be set by the config.txt "default_low_vram_presets" option
+* added a config.txt option and checkbox to "Show Newest Images First" in the log. If this is off the newest images are last
+* the Flux base models are recategorized into the FluxDev and FluxSchnell folders
+* fixed a strange bug in which the "Specific Seed" value was being trashed when changing presets
+* fixed bugs with SuperPrompter, Wildcard Panel, Sampler selector, Refiner switch and metadata processing
+* subject to testing, this version provisionally supports NVIDIA 50xx video cards
+* temporarily removed several Wildcard files that need improvement
+* Release Date: May 22nd, 2025<br/><br/>
+
+
+# 0.9.8 Dev
+
+* initialized the UserDir folder: its location defaults to the repo's parent
+* UserDir contains the models, master & user presets, startup batch, startup & control images, and wildcards folders
+* the UserDir also contains config.txt and config_modification_tutorial.txt, torch_base.txt, and the Random Prompt master and user topic folders
+* config.txt now contains all the settings listed in config_modification_tutorial.txt, making changes much easier
+* startup_batch now holds all the optional batch files, besides the default run_FooocusPlus.bat
+* master_presets is a copy of the same folder in the repo, for user reference only
+* user_presets is designed for custom modifications of the master presets and presets saved within the UI
+* during runtime, presets are loaded from the scratchpad presets folder within the repo, which is dynamically stocked
+  from master_presets and then overwritten with the contents of user_presets
+* this system enables any master preset to be superceded by a user preset, reducing potential preset bloat
+* accessed from the Extras tab, the Make New Preset button enables creation of a preset based on the current parameters
+* removed "auto" model support in presets, a confusing & unnecessary "feature"
+* "Read Wildcards in Order" is now grouped with the wildcard dropdowns and called "Generate Wildcards in Order"
+* renamed "Random" to "Random Seed" and "Fixed Seed" to "Specific Seed" (it is not really fixed because it still increments)
+* moved "Disable Seed Increment" to just above "Specific Seed" and renamed it "Freeze Seed"
+* introduced "Seed Increment Skip" for large random increments, called "Extra Variation", placed directly below "Random Seed"
+* all four seed options now have descriptive help messages
+* all UI references to OneButtonPrompt are now called "Random Prompt" and its "Presets" are called "Topics"
+* removed more offensive text from Random Prompt, resolving some problems with Waifu's and Husbando's operation
+* cleaned up the files and coding related to Random Prompt that caused the creation of ghost directories in the repo.
+* removed superfluous Random Prompt and SuperPrompt controls in the Extras section
+* the Random Prompt Topics dropdown menu is now alpha-sorted
+* the newly labeled "Create a New Topic" option now operates a dropdown Save Topic group with improved formatting and help
+* the same system used for user preset control also applies to user topics, allowing for easy addition and removal of topics
+* the Superprompter folder is now correctly rebuilt if it is deleted
+* corrected the path for the full SD3.0 medium base model, with accessories
+* python_embedded version control now only applies to Windows platforms because other platforms do not use python_embedded
+* updated many more Python libraries and removed Torch and its five related dependencies from the library
+* Torch and its dependencies are now dynamically installed according to the user's operating system and hardware
+* this dynamic system uses Torchruntime and the Torch version is recorded in torch_base.txt in UserDir
+* added the Flux_BlackColor_SaMay.safetensors & FluxDFaeTasticDetails.safetensors to the built-in LoRAs
+* added the Flux AntiBlur.safetensors & Hyper-FLUX.1-dev-8steps-lora.safetensors to the Starter Pack LoRAs
+* Release Date: not publicly released<br/><br/>
+
+
+# 0.9.7 Dev
+
+* this release restores all mainline Fooocus functions
+  including prompt and wildcard operation
+* enabled automatic updating for the development (dev) branch
+* if VRAM<6GB the UI now defaults to the VegaRT model
+* console warnings of unreliability occur if VRAM<6GB
+* if VRAM<4GB then the use of large models is locked out (Comfy lockout)
+* Smart Memory is now enabled by default if VRAM=>12GB
+* added video card information and Smart Memory status to the UI ("System Information")
+* added error control for file downloads
+* removed offensive language from the One Button Prompt texts
+* the SuperPrompter is now functional
+* fully integrated the upscale or vary (UOV) sliders into normal operation
+* the Vary (Subtle) and Vary (Strong) radio buttons no longer exist,
+  instead their values are indicated in the info. text below the vary slider
+* upscale and vary descriptions are now more friendly and helpful
+* set the widths for the Random Prompt and Generate columns to 75 pixels
+* except for Describe and Meta, the Input Image tabs are restored to the Fooocus standard
+* the number of pages in the image catalogue now defaults to a maximum of 100 instead of 65
+* system message updates now only report on FooocusPlus changes
+* the Brush Colour selector is integrated into the Inpainting pane
+* Inpainting descriptions are now more friendly and helpful
+* the Advanced and Enable Advanced Masking checkboxes now default to disabled
+* the Gradio startup messages are FooocusPlus specific and do not refer to sharing
+* a checkbox in the Describe pane now switches the auto-describe feature on or off
+* two wildcard files have been added and some of the existing wildcards are improved
+* the welcome logic has been improved and placed in its own module
+* if skip_jpg is present all downloaded welcome JPGs are ignored
+* if skip.png is also present, the welcome image is the default black screen
+* welcome images are stored in enhanced\welcome_images instead of enhanced\attached
+* the control images (skip.jpg and skip.png) are stored in enhanced\control_images
+* "python_embeded" is renamed "python_embedded": changed all internal references
+* updated many Python libraries and fixed the Onnx Graphsurgeon bug
+* python_embedded now includes version control: if the version is incorrect then program loading stops
+* resolved the bug: "SaveImageWebsocket.IS_CHANGED() missing 1 required positional argument: 's'"
+* Release Date: not publicly released<br/><br/>
+
+
+# 0.9.6 Beta7
+
+* introduced support for 4GB SDXL compatible models
+* system defaults to a 4GB version of SAI SDXL if VRAM<6GB
+* improved FooocusPlus version messaging: updates are specifically identified
+* special base model and LoRA subfolders (e.g. "\Flux") are automatically created
+* "Disable Seed Increment" now works (this was an inherited bug)
+* wildcards are now always random, even when the seed is frozen (another inherited bug)
+* "Read Wildcards in Order" has been restored
+* whatever JPGs are stored in enhanced/attached/ will be randomly displayed as welcome images
+* removed all __pycache__ and .pyc files from the FooocusPlus repository
+* in Beta2, updated the presets and Flux file selector to better support Flux models
+* in Beta2, restored the "Extreme" performance setting & increased the limit on displayed presets to 30
+* in Beta3, added support for Stable Diffusion 1.5 (SD1.5) base models
+* in Beta4, Flux presets now support the clip model parameter, allowing for lower resource use presets
+* in Beta5, the Flux1D_GGUF & Flux1D_8GGUF presets now support the HyperFlux & AntiBlur LoRAs
+* in Beta5, HyperFlux16 now uses flux-hyp16-Q8_0.gguf instead of Q5, and supports FaeTastic & AntiBlur LoRAs
+* in Beta5, the two 4GB presets now correctly download the specified base models
+* in Beta6, added clip_model error control to comfy_task and added clip_model parameter to Flux1S_GGUF
+* in Beta7, corrected a bug with "Refresh All Files" and also gave it a realistically sized button
+* in Beta8, disabled all further updating to reduce the possibility of corruption by FooocusPlus 1.0.0
+* Release Date: March 15th, 2025<br/><br/>
+
+
+# 0.9.5
+
+* rebuilt the .git folder for inclusion in PureFooocus release versions
+* fixed the bug with inconsistent "default" preset capitalization
+* confirmed that Hunyuan-DiT (HyDiT) is working
+* rebuilt a new Kolors zip archive and unploaded it to the Hugging Face repo.
+* recoded comfy_task.py to support this new archive and tested the three Kolors presets
+* slightly improved the three Kolors presets and named them more logically
+* disabled the topbar preset tooltips and iFrame Instruction pane in all languages
+* removed the presets html and samples folder and reduced the image folder to just one image
+* simplified the Javascript tooltip code down to just a return statement
+* balanced entry_with_update.py to include only the best features from Fooocus & SimpleSDXL2
+* Pre-release version<br/><br/>
+
+
+# 0.9.4
+
+* the GroundingDINO and RemBG security issues are now resolved
+* Gradio analytics are now permanently disabled (no more calling home)
+* Gradio share is disabled for security reasons
+* the UI is temporily coded to only display topbar preset menu selection
+* in preparation for a categorized dropdown preset menu, all presets now contain a "preset category"
+  parameter. Once the preset dropdown is working the topbar preset menu will be removed
+* the default base model is changed from JuggernautXL XI to Elsewhere XL which works better as a general
+  purpose model
+* Comfy lockout now occurs when VRAM<6GB instead of VRAM<4GB
+* when wildcards are inserted into the prompts they are no longer surrounded by square brackets
+* the ROOT constant and two pseudo globals are now located in common.py
+* fixed a mainline Fooocus bug in which the Metadata Scheme could not be chosen when Metadata was enabled
+* by default, the Outputs folder is now located in the FooocusPlus folder
+* when the Translator is disabled, the Random Prompt and SuperPrompt buttons are reformatted
+* FooocusPlus is now an independent fork, no longer dependent on SimpleSDXL2 or mainline Fooocus
+* the file structure of FooocusPlus is now self-contained, containing all models within FooocusPlusAI
+* Pre-release version<br/><br/>
+
+
+# 0.9.1 to 0.9.3
+
+* Resolved all security issues except those associated with GroundingDINO and RemBG,
+  this involved a lot of recoding and it was the major work accomplished in these versions
+* sub-optimal overrides (such as disabling Smart Memory) to support VRAM sharing have been removed
+* coding has been made more streamlined and standardized
+* image parameters, including the prompt, can now be changed while waiting for image generation
+* the preset dropdown selector from mainline Fooocus has been restored
+* work is ongoing to switch between the topbar and dropdown preset selectors
+* console messages now have more clarity
+* simple images with the words "Pure Fooocus" replace the distracting startup images on the main canvas
+* the Fooocus metadata option has been restored and the Simple metadata option has been removed
+* the mixed language preset tooltips, the Chinese only preset frame under the Settings tab, the
+  Translator button and Translation Methods selector are all removed unless the command line
+   argument "--language cn" (i.e. Chinese language) is present
+* the "Big Model" translation method is removed since it did not work in SimpleSDXL2 or in FooocusPlus
+* the UI Language selector is removed since it was redundant and only partially functional
+* the system information displayed at the bottom of the Extras (formerly Enhanced) pane has been improved
+* preliminary work on supporting Stable Diffusion 3.5 has been initiated
+* the FooocusPlus version number is now tied to this log rather than being hard coded
+* Pre-release versions<br/><br/>
+
+
+# 0.9.0
+
+* (2024-12-24) Forked FooocusPlus from SimpleSDXL2
+* modified en.json language file to regularize capitalization, etc.
+* introduced en_uk.json to support European English
+* installed corrected version of watercolor_2 & mandala_art styles
+* installed pony_real style in the new FooocusPlus style json

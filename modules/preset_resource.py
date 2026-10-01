@@ -1,0 +1,896 @@
+import os
+import json
+import random
+import threading
+import time
+import gradio as gr
+import args_manager as args
+import common
+import modules.config as config
+import modules.loader as loader
+import modules.user_structure as US
+from ldm_patched.modules import model_management
+from enhanced.translator import interpret
+from modules.flags import default_class_params, \
+    task_class_mapping
+from modules.ui_features import add_to_favorites, \
+    remove_from_favorites
+from pathlib import Path
+
+
+ALL_FAV_CATEGORIES = {'Favorite', 'SDXL_Favorite', 'LowVRAM_Favorite', 'SDXL_LowVRAM_Favorite'}
+current_preset = args.args.preset
+category_selection = 'Favorite'
+presets_path = Path('presets')
+random_block = False # used by Random Preset Category
+# used by Add/Remove preset from Favorites
+favorite_preset = 'Default'
+favorite_category = 'Favorite'
+# disable adaptive CFG & Step slider control:
+revert_fooocus = False
+
+
+def is_low_vram_active() -> bool:
+    return getattr(config, 'default_low_vram_presets', False) or (getattr(common, 'total_vram_gb', 8.0) < 7.0)
+
+def get_active_fav_cat() -> str:
+    return US.get_active_favorite_category(common.comfy_active, is_low_vram_active())
+
+def get_default_preset_name() -> str:
+    return '4GB_Default' if is_low_vram_active() else 'Default'
+
+
+def modernize_legacy_metadata(metadata):
+    """
+    Universal Technical Bridge for Legacy Logs.
+    Fuses technical Engine/Workflow data from
+    ANY preset file into the metadata dictionary
+    to prevent the UI from wiping the backend state.
+    """
+    # 1. Preset Name Normalization
+    preset_name = metadata.get('current_preset',
+                  metadata.get('Preset',
+                  metadata.get('preset', '')))
+
+    if preset_name == 'ZI-TurboDIT':
+        preset_name = 'ZI-Turbo'
+
+    if preset_name:
+        metadata['current_preset'] = preset_name
+        metadata['Preset'] = preset_name
+    else:
+        return metadata
+
+    # Ensure the dictionary is updated so extract_preset_name_from_log sees it
+    metadata['current_preset'] = preset_name
+    metadata['Preset'] = preset_name
+
+    # 2. Universal Deep Fusion
+    current_wf = str(metadata.get('task_method', ''))
+    if 'default_engine' not in metadata or current_wf in ['None', '', 'NoneType']:
+        preset_file = None
+        for path in Path('presets').rglob('*.json'):
+            if path.stem == preset_name:
+                preset_file = path
+                break
+
+        if preset_file:
+            try:
+                with open(preset_file, "r", encoding="utf-8") as f:
+                    content = json.load(f)
+                    engine_data = content.get('default_engine', content.get('engine', {}))
+                    if engine_data:
+                        metadata['default_engine'] = engine_data
+                        metadata['engine'] = engine_data
+                        short_engine = engine_data.get('backend_engine')
+                        full_engine = task_class_mapping.get(short_engine, short_engine)
+                        metadata['backend_engine'] = full_engine
+                        metadata['Backend Engine'] = full_engine
+
+                        engine_defaults = default_class_params.get(short_engine, {})
+                        if 'engine' not in metadata: metadata['engine'] = {}
+
+                        metadata['engine']['disvisible'] = engine_data.get('disvisible', engine_defaults.get('disvisible', []))
+                        metadata['engine']['disinteractive'] = engine_data.get('disinteractive', engine_defaults.get('disinteractive', []))
+
+                        wf = engine_data.get('backend_params', {}).get('task_method')
+                        if not wf or str(wf) == 'None':
+                            wf = default_class_params.get(short_engine, {}).get('backend_params', {}).get('task_method')
+
+                        metadata['task_method'] = wf
+                        metadata['Workflow'] = wf
+
+                        interpret('[Preset] Extracted preset name from metadata:', preset_name)
+                        interpret(f'Preset Engine: {full_engine}, Workflow: {wf}')
+
+                        # Find 'default_clip_skip'
+                        # in the preset
+                        cs = content.get('default_clip_skip')
+
+                        # Fuse the value so the
+                        # Finalizer can see it
+                        if cs is not None:
+                            metadata['clip_skip'] = cs
+
+            except Exception as e:
+                interpret(f'[Preset] ⚠️ Modernizer error: {e}')
+        else:
+            interpret(f'[Preset] ⚠️ Modernizer file not found for: {preset_name}')
+
+    return metadata
+
+
+def normalize_preset_loading():
+    common.metadata_loading = False
+    common.log_metadata = ''
+    config.default_prompt = ''
+    return
+
+
+def find_preset_file(preset):
+    global ALL_FAV_CATEGORIES, presets_path
+
+    preset_file_path = ''
+    preset_name_path = Path(preset)
+    if preset_name_path.suffix != 'json':
+        preset_name_path = Path(preset_name_path.with_suffix(preset_name_path.suffix + '.json'))
+
+    active_fav = get_active_fav_cat()
+
+    # 1. Check current category selection first
+    if category_selection in ALL_FAV_CATEGORIES:
+        favorite_path = Path(presets_path / category_selection)
+        preset_file_path = US.find_file_path(favorite_path, preset_name_path)
+
+    # 2. Check the active favorite category for this system mode
+    if not preset_file_path:
+        favorite_path = Path(presets_path / active_fav)
+        preset_file_path = US.find_file_path(favorite_path, preset_name_path)
+
+    # 3. Fallback: Search general preset folders, ignoring ALL favorite folders
+    if not preset_file_path:
+        for candidate_file in Path(presets_path).rglob(preset_name_path.name):
+            if any(fav in candidate_file.parts for fav in ALL_FAV_CATEGORIES):
+                continue
+            preset_file_path = candidate_file.resolve()
+            break
+
+    if not preset_file_path:
+        if preset not in ['Default', '4GB_Default']:
+            interpret('[Preset] Could not find the preset:', preset)
+            print()
+        return {}
+
+    common.preset_file_path = preset_file_path
+    return preset_file_path
+
+
+def find_preset_category(preset):
+    active_fav = get_active_fav_cat()
+    try:
+        preset_file = Path(find_preset_file(preset))
+        if preset_file:
+            parent_name = preset_file.parent.name
+            # If the file belongs to any favorite category, normalize to the active favorite
+            if parent_name in ALL_FAV_CATEGORIES:
+                return active_fav
+            if category_selection == parent_name:
+                return category_selection
+            return parent_name
+        else:
+            return active_fav
+    except Exception:
+        return active_fav
+
+category_selection = find_preset_category(current_preset)
+
+
+def is_comfy_preset_file(preset_file_path: Path) -> bool:
+    """
+    Dynamically determines if a preset file is Comfy-specific.
+    Uses fast directory name matching, falling back to JSON parsing only for mixed folders.
+    """
+    # 1. Fast Directory Check: If inside a known Comfy category, classify immediately
+    comfy_folders = {'Flux1Dev', 'Flux1Krea', 'Flux1Schnell', 'HyperFlux1D', 'LowVRAM_Plus', 'SD3x', 'Z-Image Base', 'Z-Image Turbo', 'SD1.5'}
+    if preset_file_path.parent.name in comfy_folders:
+        return True
+
+    # 2. Mixed Directory Fallback: Inspect the JSON content for the active engine
+    try:
+        with open(preset_file_path, 'r', encoding='utf-8') as f:
+            content = json.load(f)
+            engine_data = content.get('default_engine', content.get('engine', {}))
+            if engine_data:
+                backend = engine_data.get('backend_engine', 'Fooocus')
+                return backend != 'Fooocus'
+    except Exception:
+        pass
+
+    return False
+
+
+def get_preset_list():
+    # called by launch, preset_resource & webui
+    preset_list = list(presets_path.rglob('*.json'))
+    if not [preset_list]:   # also used to check if preset files exist
+        interpret('[Preset] No presets found')
+        preset_list = ['initial']
+        return preset_list
+    return preset_list
+
+
+def get_presets_in_folder(arg_folder_name):
+    if not arg_folder_name:
+        arg_folder_name = category_selection
+    presets_in_folder = []
+    if arg_folder_name == presets_path:
+        folder_name = presets_path
+    else:
+        folder_name = Path(presets_path/arg_folder_name)
+    if folder_name.is_dir():
+        presets_in_folder = list(folder_name.rglob('*.json'))
+        if not presets_in_folder:
+            interpret('[Preset] Could not find presets in this directory:', arg_folder_name)
+            print()
+    else:
+        interpret('[Preset] Could not find the preset directory:', arg_folder_name)
+        print()
+    return presets_in_folder
+
+
+def get_presetnames_in_folder(folder_name):
+    global ALL_FAV_CATEGORIES, presets_path
+
+    presetnames_in_folder = []
+    if folder_name == 'All':
+        folder_name = presets_path
+
+    presets_in_folder = get_presets_in_folder(folder_name)
+    if presets_in_folder:
+        for preset_file in presets_in_folder:
+            preset_file_path = Path(preset_file)
+
+            # If Comfy is inactive,
+            # filter out any Comfy-specific presets
+            if not common.comfy_active:
+                if is_comfy_preset_file(preset_file_path):
+                    continue
+
+            presetnames_in_folder.append(preset_file_path.stem)
+
+    # Determine if the active query
+    # is any of the 4 favourite categories
+    is_favorite_cat = folder_name in ALL_FAV_CATEGORIES
+
+    if folder_name in ['LowVRAM_Favorite', 'SDXL_LowVRAM_Favorite']:
+        default_name = '4GB_Default'
+    else:
+        default_name = 'Default'
+
+    # If it's a favourite category, force-insert
+    # 'Default' to prevent empty UI states
+    if is_favorite_cat:
+        if default_name in presetnames_in_folder:
+            presetnames_in_folder.remove(default_name)
+        presetnames_in_folder.insert(0, default_name)
+
+    # For standard folders, only position 'Default'
+    # first if it actually exists inside it
+    elif default_name in presetnames_in_folder:
+        presetnames_in_folder.remove(default_name)
+        presetnames_in_folder.insert(0, default_name)
+
+    # if we are listing files in all folders ('All')
+    if folder_name == presets_path:
+        temp_set = set(presetnames_in_folder)    # then remove duplicates
+        presetnames_in_folder = sorted(temp_set) # now convert back to a list
+        # If 'Default' was sorted away,
+        # make sure it is still first
+        if default_name in presetnames_in_folder:
+            presetnames_in_folder.remove(default_name)
+            presetnames_in_folder.insert(0, default_name)
+
+    return presetnames_in_folder
+
+
+def get_all_presetnames():
+    return get_presetnames_in_folder(presets_path)
+
+
+def get_preset_foldernames(omit_current_dir = False):
+    preset_foldernames = []
+    if presets_path.is_dir():
+        for item in presets_path.iterdir():
+            if item.is_dir():
+                if omit_current_dir and item.name == category_selection:
+                    continue
+                else:
+                    preset_foldernames.append(item.name)
+        if not preset_foldernames:
+            interpret('[Preset] Could not find any preset sub-directories in:', preset_folder)
+            print()
+            return preset_foldernames
+    else:
+        interpret('[Preset] Could not find the directory:', presets_path)
+        print()
+    return preset_foldernames
+
+
+def get_preset_categories():
+    preset_categories = get_preset_foldernames()
+    if preset_categories:
+        is_low = is_low_vram_active()
+        active_fav = get_active_fav_cat()
+
+        # 1. Hide the 3 inactive Favorite
+        # folders from the dropdown
+        for fav_cat in ALL_FAV_CATEGORIES:
+            if fav_cat != active_fav and fav_cat in preset_categories:
+                preset_categories.remove(fav_cat)
+
+        # 2. When Comfy is disabled, hide
+        # all Comfy-specific categories
+        if not common.comfy_active:
+            comfy_categories = {
+                'Flux1Dev', 'Flux1Krea', 'Flux1Schnell', 'HyperFlux1D',
+                'LowVRAM_Plus', 'SD1.5', 'SD3x', 'Z-Image Base', 'Z-Image Turbo'
+            }
+            preset_categories = [c for c in preset_categories if c not in comfy_categories]
+
+        preset_categories.append('All')
+        preset_categories.append('Random')
+        preset_categories.sort()
+    return preset_categories
+
+
+def countdown(arg_seconds): # used by the Random Preset Category
+    global random_block
+    random_block = True
+    while arg_seconds >0:
+        time.sleep(1)
+        arg_seconds -= 1
+    random_block = False
+    return
+
+def init_countdown_blocker(timer_duration = 5):
+    timer_thread = threading.Thread(target=countdown, args=(timer_duration,))
+    timer_thread.start()
+    return
+
+def get_random_preset_in_category(rand_category):
+    global category_selection, presets_path
+    if rand_category == 'All':
+        rand_category = presets_path
+    preset_list = get_presetnames_in_folder(rand_category)
+    if len(preset_list) > 1 and config.enable_random_preset_in_category:
+        random_index = random.randint(0, (len(preset_list)-1))
+        # Assign the string directly to prevent
+        # pathlib from stripping the decimal part
+        random_preset_name = preset_list[random_index]
+    else:
+        try:
+            random_preset_name = preset_list[0]
+        except:
+            interpret('No presets found in the category:', rand_category)
+            random_preset_name = ''
+    return random_preset_name
+
+
+def set_category_selection(arg_category_selection):
+    # called by webui category_selection.change()
+    global category_selection, current_preset, random_block
+    if arg_category_selection == '':
+        category_selection = 'Favorite'
+    if (arg_category_selection == 'Random') and\
+        (arg_category_selection != category_selection):
+        category_selection = 'All'
+    else:
+        category_selection = arg_category_selection
+    preset_choices = get_presetnames_in_folder(category_selection)
+    if (not current_preset in preset_choices or arg_category_selection == 'Random') and not random_block:
+        current_preset = get_random_preset_in_category(category_selection)
+        if arg_category_selection == 'Random':
+            init_countdown_blocker(2)
+    return gr.update(value=category_selection),\
+        gr.update(choices=preset_choices, value=current_preset),\
+        gr.update(value=current_preset)
+
+
+def select_data_from_preset(preset_content):
+    # the common.metadata_loading boolean
+    # preserves metadata from preset overwrite
+    global current_preset
+    preset_prepared = {}
+    items = US.verify_dictionary(preset_content)
+
+    # --- DYNAMIC ENGINE SYNCHRONIZATION ---
+    # Update common.default_engine instantly
+    # so downstream sliders don't lag behind
+    if 'default_engine' in items:
+        common.default_engine = items.get('default_engine')
+    else:
+        common.default_engine = {}
+
+    if common.default_engine:
+        # Clear engine string to allow Comfy operations
+        config.backend_engine = ''
+    else:
+        # Restore standard Fooocus operation
+        config.backend_engine = getattr(config, 'default_engine', {}).get('backend_engine', 'Fooocus')
+
+    # Force global model name synchronization during preset loads
+    preset_model = items.get('default_model', items.get('base_model', items.get('Base Model')))
+    if preset_model and preset_model != 'None':
+        loader.base_model_name = preset_model
+
+    # catches presets that do not set 'default_vae'
+    preset_vae = items.get('default_vae')
+    if preset_vae is None or preset_vae == 'None' or preset_vae == '':
+        preset_vae = 'Default (model)'
+    config.default_vae = preset_vae
+
+    # Force global refiner name synchronization during preset loads
+    preset_refiner = items.get('default_refiner', items.get('refiner_model', items.get('Refiner Model')))
+    if preset_refiner and preset_refiner != 'None':
+        config.default_refiner = preset_refiner
+
+    # Force loader.lora_filenames list synchronization during preset loads
+    engine = common.default_engine.get('backend_engine', 'Fooocus') if common.default_engine else 'Fooocus'
+    task_method = common.default_engine.get('backend_params', {}).get('task_method') if common.default_engine else None
+    loader.lora_filenames = loader.get_lora_model_list(engine, task_method)
+    # --------------------------------------
+
+    # for presets that do not have a default prompt or negative prompt
+    # and almost all presets do not have an image quantity
+    items.setdefault("default_prompt",
+        config.default_prompt)
+    items.setdefault("default_prompt_negative",
+        config.default_prompt_negative)
+    items.setdefault("v2_substyle", "Default")
+    items.setdefault("default_image_quantity",
+        config.default_image_quantity)
+    items.setdefault("default_sampler",
+        config.default_sampler)
+    items.setdefault("default_scheduler",
+        config.default_scheduler)
+    items.setdefault("default_overwrite_step", -1)
+
+    if common.metadata_loading:
+        try:
+            del items['default_styles']
+        except:
+            pass
+    else:
+        preset_prompt = items.get("default_prompt")
+        if preset_prompt != "":
+            config.default_prompt = preset_prompt
+
+        preset_negative = items.get("default_prompt_negative")
+        if preset_negative != "":
+            default_prompt_negative = preset_negative
+
+        preset_substyle = items.get("v2_substyle")
+        if preset_substyle != "":
+            config.v2_substyle = preset_substyle
+
+        preset_quantity = items.get("default_image_quantity")
+        if preset_quantity != config.default_image_quantity:
+            config.default_image_quantity = preset_quantity
+            interpret('[Preset] Set the Image Quantity to:',
+                config.default_image_quantity)
+
+        preset_sampler = items.get("default_sampler")
+        if preset_sampler != config.default_sampler:
+            config.default_sampler = preset_sampler
+            print()
+            interpret('[Preset] Set the Sampler to:',
+                config.default_sampler)
+
+        preset_scheduler = items.get("default_scheduler")
+        if preset_scheduler != config.default_scheduler:
+            config.default_scheduler = preset_scheduler
+            interpret('[Preset] Set the Scheduler to:',
+                config.default_scheduler)
+
+        preset_overwrite_step = items.get("default_overwrite_step")
+        if preset_overwrite_step != config.default_overwrite_step:
+            config.default_overwrite_step = preset_overwrite_step
+            interpret('[Preset] Set Overwrite Steps to:',
+                config.default_overwrite_step)
+
+    return items
+
+
+def get_preset_content(preset, quiet=True):
+    try:
+        if common.metadata_loading and common.log_metadata:
+            preset_content = US.verify_dictionary(common.log_metadata)
+            common.preset_content = preset_content
+            return preset_content
+    except:
+        common.metadata_loading = False
+        common.log_metadata = []
+    preset_file = find_preset_file(preset)
+    if preset_file:
+        try:
+            with open(preset_file, "r", encoding="utf-8") as json_file:
+                json_content = json.load(json_file)
+                if not quiet:
+                    interpret('[Preset] Loaded the content of the preset:', preset)
+                    interpret(' from:', preset_file)
+            common.preset_content = json_content
+            return json_content
+        except Exception as e:
+            interpret('[Preset] Could not load the content of the preset:', preset)
+            interpret(' from:', preset_file)
+            print(f'{e}')
+        print()
+    return {}
+
+
+def check_for_favorite(preset):
+    global presets_path
+    preset_name_path = Path(preset)
+    if preset_name_path.suffix != 'json':
+        preset_name_path = Path(preset_name_path.with_suffix(preset_name_path.suffix + '.json'))
+    favorite_path = Path(presets_path / get_active_fav_cat())
+    return US.find_file_path(favorite_path, preset_name_path)
+
+
+def preset_favorite_value():
+    default_name = get_default_preset_name()
+    if check_for_favorite(current_preset) and current_preset != default_name:
+        return 'Remove Current Preset from Favorites'
+    else:
+        return 'Add Current Preset to Favorites'
+
+
+def set_preset_selection(arg_preset_selection, state_params):
+    # called by webui preset_selection.change()
+    global category_selection, current_preset, \
+        random_block, revert_fooocus
+
+    if arg_preset_selection == '' and not random_block:
+        if current_preset == '':
+            current_preset = args.args.preset
+        interpret('Using the preset:', f'{current_preset}...')
+
+    elif (current_preset != arg_preset_selection) and not random_block and \
+        (category_selection == find_preset_category(arg_preset_selection) \
+        or category_selection == 'All'):
+        current_preset = arg_preset_selection  # update the current preset tracker
+
+    state_params.update({'bar_button': current_preset})
+    args.args.preset = current_preset # for use by AR Shortlist/Standard toggle
+
+    # determine prompt and quantity values in current preset
+    # so that they can update their UI controls
+    if common.metadata_loading:
+        preset_content = common.log_metadata
+    else:
+        preset_content = get_preset_content(current_preset, quiet = True)
+    preset_content = select_data_from_preset(preset_content)
+
+    # -- DYNAMIC OVERWRITE STEP BOUNDARY CALCULATOR --
+
+    lora_warning = False
+    slider_min = -1
+    if revert_fooocus:
+        slider_max = 200
+    else:
+        slider_max = 100
+    slider_info = 'Set to -1 to disable'
+    slider_value = config.default_overwrite_step
+
+    # If we are using a Comfy-mode preset, enforce
+    # strict bounds and clear the description
+    if common.default_engine:
+        preset_lower = current_preset.lower()
+        # Remove "Set to -1 to disable" from the UI:
+        slider_info = ''
+
+        # Use non-adaptive step control if using debug
+        # "Revert CFG & Step to Fooocus Standards"
+        if revert_fooocus:
+            slider_min = 1
+
+        # Hyper-distilled 4-step models
+        # e.g. Flux Schnell and SD3.5 Large Turbo
+        elif 'schnell' in preset_lower or 'large-turbo' in preset_lower:
+            slider_min = 4
+            slider_max = 12
+            if slider_value < 4 or slider_value > 12:
+                slider_value = 4
+
+        # Distilled 8-step models
+        # e.g. Z-Image Turbo and KolorsFast
+        elif 'turbo' in preset_lower or 'fast' in preset_lower:
+            slider_min = 4
+            slider_max = 20
+            if slider_value < 4 or slider_value > 20:
+                slider_value = 8
+
+        # SD1.5 Models use the SDXL defaults
+        elif 'sd1' in preset_lower:
+            pass
+
+        # SD3.5 / SD3x Models
+        elif 'sd3' in preset_lower:
+            slider_min = 15
+            slider_max = 45
+            if slider_value < 15 or slider_value > 45:
+                slider_value = 30
+
+        # Standard DiT models
+        # (Flux Dev, Kolors, HyDiT, Z-Image Base)
+        else:
+            slider_min = 10
+            slider_max = 60
+            if slider_value < 10 or slider_value > 60:
+                slider_value = 30 if 'kolors' in preset_lower or 'hydit' in preset_lower else 20
+
+        # Update config to keep it in sync
+        # with the auto-corrected slider value
+        config.default_overwrite_step = slider_value
+
+        # Check if the active engine is Flux,
+        # and if the model is an FP8 safetensors format
+        if common.default_engine and common.default_engine.get('backend_engine') == 'Flux':
+            model_name = preset_content.get('default_model', '').lower()
+            if 'fp8' in model_name and '.gguf' not in model_name:
+                lora_warning = True
+
+    # -- DYNAMIC CFG (GUIDANCE) BOUNDARY CALCULATOR --
+
+    if revert_fooocus:
+        cfg_min = 0.1
+        cfg_step = 0.1
+    else:
+        cfg_min = 1.0
+        cfg_step = 0.05
+    cfg_max = 30.0
+
+    cfg_value = config.default_cfg_scale
+    preset_lower = current_preset.lower()
+
+    # If we are using a Comfy-mode preset:
+    if common.default_engine:
+
+        # Use non-adaptive Guidance Scale if using debug
+        # "Revert CFG & Step to Fooocus Standards"
+        if revert_fooocus:
+            pass
+
+        # Hyper-Distilled (Turbo/Schnell)
+        elif 'turbo' in preset_lower or 'schnell' in preset_lower or ('zi-base' in preset_lower and 'fast' in preset_lower):
+            cfg_max = 2.0
+
+        # Z-Image Base (AuraFlow)
+        elif 'zi-base' in preset_lower or 'zib' in preset_lower:
+            cfg_max = 6.0
+
+        # Standard DiT / MM-DiT (SD3.5, Flux, HyDiT)
+        elif 'sd3' in preset_lower or 'flux' in preset_lower or 'hydit' in preset_lower:
+            cfg_max = 10.0
+
+        # Kolors (SDXL-based but refined)
+        elif 'kolors' in preset_lower:
+            cfg_max = 15.0
+
+        # SD1.5 Models
+        elif 'sd1' in preset_lower:
+            cfg_max = 20.0
+
+    # ensure the value doesn't exceed the new max
+    if cfg_value > cfg_max:
+        cfg_value = cfg_max
+
+    config.default_cfg_scale = cfg_value
+
+    # ------------------------------------------------
+
+    return (gr.update(value=current_preset),
+        gr.update(value=state_params),
+        gr.update(value=current_preset),
+        gr.update(value=common.resolution),
+        gr.update(value=category_selection),
+        gr.update(value=config.default_prompt),
+        gr.update(value=config.default_prompt_negative),
+        gr.update(value=config.v2_substyle),
+        gr.update(value=config.default_image_quantity),
+        gr.update(value=config.default_sampler),
+        gr.update(value=config.default_scheduler),
+        gr.update(interactive=current_preset != 'Default'),
+        gr.update(value=preset_favorite_value()),
+        gr.update(value=slider_value,
+            minimum=slider_min,
+            maximum=slider_max,
+            info=slider_info),
+        gr.update(visible=lora_warning),
+        gr.update(value=cfg_value, minimum=cfg_min,
+            maximum=cfg_max, step=cfg_step))
+
+def bar_button_change(bar_button, state_params):
+    global category_selection, current_preset
+    state_params.update({'bar_button': bar_button})
+    current_preset = bar_button
+    args.args.preset = current_preset
+
+    # Bar buttons always belong to the active favorite category
+    category_selection = get_active_fav_cat()
+
+    return state_params, gr.update(value=category_selection),\
+        gr.update(value=current_preset)
+
+
+def get_initial_preset_content():
+    global current_preset, category_selection
+    json_content = ''
+    preset = args.args.preset
+    if not find_preset_file(preset):
+        if find_preset_file('Default'):
+            preset = 'Default'
+        else:
+            interpret('[Preset] Could not find the startup preset')
+            category_selection = 'Random'
+            if not preset:
+                interpret('[Preset] Could not find any presets')
+                current_preset = 'initial'
+    if category_selection != 'Random' and current_preset != 'initial':
+        args.args.preset = preset
+        current_preset = preset
+        category_selection = find_preset_category(preset)
+    if current_preset != 'initial':
+        set_category_selection(category_selection)
+        json_content = get_preset_content(current_preset, quiet=False)
+        if json_content:
+            common.preset_content = json_content
+    return json_content
+
+
+def get_lowVRAM_preset_content():
+    global current_preset, category_selection
+    json_content = ''
+    if find_preset_file('4GB_Default'):
+        config.default_low_vram_presets = True
+        category_selection = get_active_fav_cat()
+        common.preset_bar_category = category_selection
+        args.args.preset = '4GB_Default'
+        current_preset = args.args.preset
+        json_content = get_preset_content(current_preset, quiet=False)
+        interpret('[Preset] The 4GB_Default preset is optimized for low VRAM systems')
+    else:
+        config.default_low_vram_presets = False
+        interpret('[Preset] The low VRAM 4GB_Default preset is is not available')
+    return json_content
+
+
+def preset_favorite_toggle():
+    global current_preset, category_selection, \
+        favorite_preset, favorite_category
+
+    active_fav_cat = get_active_fav_cat()
+    default_name = get_default_preset_name()
+    common.preset_bar_category = active_fav_cat
+
+    target_preset = current_preset
+    target_category = category_selection
+
+    if current_preset == default_name:
+        interpret(f'[Preset] Cannot add or delete the {default_name} preset')
+        PR_choices = get_presetnames_in_folder(active_fav_cat)
+        return (gr.update(choices=PR_choices, value=default_name),
+                gr.update(value=active_fav_cat))
+
+    # 1. Perform File Operations
+    if category_selection == active_fav_cat:
+        # Removing from active favorites
+        remove_from_favorites(current_preset)
+        target_preset = default_name
+    else:
+        # Adding to active favorites
+        add_to_favorites(current_preset, category_selection)
+        target_preset = current_preset
+        target_category = active_fav_cat
+
+    # 2. Re-sync working structure completely BEFORE telling Gradio to update
+    US.init_preset_structure(
+        comfy_active=common.comfy_active,
+        is_low_vram=is_low_vram_active()
+    )
+
+    # 3. Update global trackers
+    current_preset = target_preset
+    category_selection = target_category
+    PR_choices = get_presetnames_in_folder(active_fav_cat)
+
+    # 4. Now return safely to Gradio
+    return (gr.update(choices=PR_choices,
+            value=current_preset),
+            gr.update(value=category_selection))
+
+
+def restore_favorites():
+    global current_preset, current_category
+    active_fav_cat = get_active_fav_cat()
+    default_name = get_default_preset_name()
+
+    count = US.init_preset_structure(
+        init=True,
+        restore_favorites=True,
+        comfy_active=common.comfy_active,
+        is_low_vram=is_low_vram_active()
+    )
+
+    preset_names = get_presetnames_in_folder(active_fav_cat)
+
+    # Ensure anchor preset is first in the list
+    if default_name not in preset_names:
+        preset_names.insert(0, default_name)
+
+    current_preset = default_name
+    current_category = active_fav_cat
+
+    return (gr.update(choices=preset_names, value=current_preset),
+            gr.update(value=active_fav_cat),
+            gr.update(interactive=count > 0))
+
+
+def select_after_restore():
+    global current_preset
+    active_fav_cat = get_active_fav_cat()
+    default_name = get_default_preset_name()
+    preset_names = get_presetnames_in_folder(active_fav_cat)
+
+    # Locate first restored non-anchor preset to select
+    first_preset = default_name
+    for name in preset_names:
+        if name != default_name:
+            first_preset = name
+            break
+
+    current_preset = first_preset
+    return gr.update(value=current_preset)
+
+
+def clear_favorites():
+    global current_preset, category_selection
+    active_fav_cat = get_active_fav_cat()
+    default_name = get_default_preset_name()
+
+    count = US.init_preset_structure(
+        clear_favorites=True,
+        comfy_active=common.comfy_active,
+        is_low_vram=is_low_vram_active()
+    )
+
+    # Fetch the freshly emptied folder choices
+    # (now containing only the default anchor)
+    preset_names = get_presetnames_in_folder(active_fav_cat)
+
+    current_preset = default_name
+    category_selection = active_fav_cat
+
+    # Notice choices=preset_names is now included:
+    return (gr.update(choices=preset_names, value=current_preset),
+            gr.update(value=category_selection),
+            gr.update(interactive=count > 0))
+
+
+def preset_count():
+    return len(get_preset_list())
+
+def pad_list(arg_list, arg_length, arg_value):
+    list_length = len(arg_list)
+    if list_length >= arg_length:
+        return arg_list
+    else:
+        padding_size = arg_length - list_length
+        padded_list = arg_list + [arg_value] * padding_size
+        return padded_list
+
+def save_preset(x):
+    global category_selection, current_preset
+    PR_choices = get_presetnames_in_folder(category_selection)
+    return gr.update(), gr.update(value=current_preset), \
+        gr.update(choices=PR_choices)
